@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+/* Light theme only: the reference also ships a dark scheme and 10 named themes — out of scope. */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Roboto", system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  /* Surfaces */
+  --color-app: #edeef2;
+  --color-sidebar: #fff;
+  --color-hover: #f6f6f6;
+  --color-selected: #007aff14;
+
+  /* Text & lines */
+  --color-ink: #060708;
+  --color-muted: #06070885;
+  --color-divider: #0c0d0e0f;
+  --color-accent: #007aff;
+
+  /* Bubbles */
+  --color-bubble-in: #fff;
+  --color-bubble-in-ink: #060708;
+  --color-bubble-in-time: #06070885;
+  --color-bubble-out: #e9fdff;
+  --color-bubble-out-ink: #011c29;
+  --color-bubble-out-time: #0784b8;
+  --radius-bubble: 16px;
+
+  /* Conversation background gradient stops.
+     ponytail: the reference also tiles a pattern SVG over this; the asset is remote-only
+     and was not saved, so the gradient alone stands in for it. */
+  --color-chat-from: #99d5d7;
+  --color-chat-to: #80bcff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
