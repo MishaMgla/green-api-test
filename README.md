@@ -1,8 +1,95 @@
 # green-api-test
 
-GREEN-API test assignment.
+A minimal React interface for sending and receiving **text** messages in MAX
+through [GREEN-API](https://green-api.com/max). It is the whole application:
+the browser talks to GREEN-API directly, with no backend and no proxy.
 
-The [specification](specs/original-spec.md), reviewed
-[implementation plan](docs/implementation-plan.md), and
-[technical tasks](docs/technical-tasks.md) are available. Implementation has not
-started. Conventions live in [CLAUDE.md](CLAUDE.md).
+Built against the [specification](specs/original-spec.md); the chat is modelled
+on the reference in `specs/max-web-reference/`. Project decisions live in
+[docs/architecture.md](docs/architecture.md), conventions in [CLAUDE.md](CLAUDE.md).
+
+## Requirements
+
+Node `^22.12.0 || >=24.0.0` (enforced by `engines`), and a GREEN-API instance
+for MAX. Nothing else — no database, no server, no environment file.
+
+## Commands
+
+```sh
+npm ci          # install exactly the locked dependencies
+npm run dev     # development server on http://localhost:5173
+npm test        # run the test suite once
+npm run build   # typecheck, then build into dist/
+npm run preview # serve the built dist/ to check the production bundle
+```
+
+`npm test` runs once and exits. `npm run test:watch` is the watching variant.
+
+## Instance setup
+
+Configure this once in the GREEN-API dashboard. The application never changes
+instance settings.
+
+| Setting | Value | Why |
+|---|---|---|
+| `webhookUrl` | **empty** | Notifications go to the instance's own queue, which this app polls. Set it, and they are posted to that URL instead and polling fails. |
+| `incomingWebhook` | **yes** | Produces `incomingMessageReceived` — without it no reply can ever arrive. |
+| `outgoingAPIMessageWebhook` | **yes** | Produces the echo of messages sent through the API, which carries the provider's timestamp and recovers a send whose response was lost. |
+| `outgoingWebhook` | no | Delivery and read statuses are not shown, and every extra notification still has to be drained. |
+
+These settings decide **whether a notification is produced at all**; `webhookUrl`
+decides **where it goes**. The names say "webhook", but with `webhookUrl` empty
+nothing is pushed anywhere — the app pulls from the queue.
+
+## Logging in
+
+Enter `idInstance`, `apiTokenInstance` and the API URL from the dashboard.
+
+Use the instance's own host, `https://<prefix>.api.green-api.com`, as the
+dashboard shows it. The shared `https://api.green-api.com` serves the same
+methods but is throttled across accounts.
+
+Credentials live in memory for the session only. They are never written to
+`localStorage`, `sessionStorage`, a cookie, a query key or a log, so a reload is
+a new login. "Change credentials" ends the session and clears everything with it.
+
+## Exclusive queue ownership
+
+A GREEN-API instance has **one** notification queue, and reading a notification
+removes it for everyone. Run exactly one client against an instance — not merely
+one browser tab, but no other application or script polling it either. A second
+reader silently steals messages from the first.
+
+The app enforces one polling owner per session: a single serial
+receive → merge → acknowledge cycle, never overlapping requests. It cannot
+enforce anything beyond its own tab.
+
+## Phone numbers
+
+A new chat accepts Russian and Belarusian numbers, with or without `+`, spaces,
+brackets or dashes:
+
+```
++7 (999) 123-45-67    79991234567     8-999-123-45-67 is not accepted
++375 29 123-45-67     375291234567
+```
+
+A number in any other format is rejected rather than silently reshaped, because
+guessing a country code would send the message to a stranger. The number is then
+checked against MAX before the chat is created.
+
+## What the app keeps
+
+Nothing, deliberately. Chat history lives in memory for the session: reloading
+the page or changing credentials starts empty. The assignment asks for the send
+and receive flow, not for storage — and anything persisted would be a copy of
+someone's correspondence on their disk.
+
+Messages already delivered stay in MAX itself. A chat reappears as soon as a new
+message arrives in it.
+
+## Scope
+
+Text only, in both directions, as the specification requires. Anything else in
+the queue — media, group chats, statuses — is acknowledged and discarded, so an
+unsupported message cannot block the queue behind it.
