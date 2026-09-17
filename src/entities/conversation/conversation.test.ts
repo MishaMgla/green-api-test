@@ -26,7 +26,14 @@ const message = (patch: Partial<Message> = {}): MappedNotification => ({
   type: 'message',
   chatId: '10000000',
   chatName: 'Ivan Petrov',
-  message: { id: '1763115112345', text: 'Hello', outgoing: false, timestamp: 1763115112000, ...patch },
+  message: {
+    id: '1763115112345',
+    text: 'Hello',
+    outgoing: false,
+    timestamp: 1763115112000,
+    fromServer: true,
+    ...patch,
+  },
 })
 
 test.each<[string, string, string | null]>([
@@ -61,12 +68,12 @@ test.each<[string, unknown, MappedNotification]>([
   [
     'message with an infinite timestamp',
     incoming(text, {}, { timestamp: 1e400 }),
-    message({ timestamp: expect.any(Number) as unknown as number }),
+    message({ timestamp: expect.any(Number) as unknown as number, fromServer: false }),
   ],
   [
     'message without a server timestamp',
     incoming(text, {}, { timestamp: undefined }),
-    message({ timestamp: expect.any(Number) as unknown as number }),
+    message({ timestamp: expect.any(Number) as unknown as number, fromServer: false }),
   ],
   ['group chat by negative chat ID', incoming(text, { chatId: '-69876543210123' }), { type: 'discard', reason: 'unsupportedChat' }],
   ['group chat by chat type', incoming(text, { chatType: 'group' }), { type: 'discard', reason: 'unsupportedChat' }],
@@ -104,4 +111,23 @@ test('inserts chats and messages idempotently, preserving arrival order', () => 
   expect(other[0].messages).toEqual([first, second])
   expect(other[1]).toEqual({ id: '10000001', name: '10000001', messages: [first] })
   expect(created[0].messages).toEqual([first])
+})
+
+test('adopts the server timestamp of an echo in either arrival order', () => {
+  // The send response reads the local clock; the echo carries the server timestamp.
+  const posted: Message = { id: 'a', text: 'hi', outgoing: true, timestamp: 1_000_500 }
+  const echo: Message = { ...posted, timestamp: 1_000_000, fromServer: true }
+  const earlier: Message = { id: 'z', text: 'earlier', outgoing: false, timestamp: 1, fromServer: true }
+  const base = insertMessage([], '10000000', earlier)
+
+  const postFirst = insertMessage(insertMessage(base, '10000000', posted), '10000000', echo)
+  expect(postFirst[0].messages).toEqual([earlier, { ...posted, timestamp: 1_000_000, fromServer: true }])
+
+  const echoFirst = insertMessage(insertMessage(base, '10000000', echo), '10000000', posted)
+  expect(echoFirst[0].messages).toEqual([earlier, echo])
+
+  // Nothing new to adopt: the same array comes back, so nothing re-renders.
+  expect(insertMessage(postFirst, '10000000', echo)).toBe(postFirst)
+  expect(insertMessage(echoFirst, '10000000', echo)).toBe(echoFirst)
+  expect(insertMessage(echoFirst, '10000000', posted)).toBe(echoFirst)
 })
