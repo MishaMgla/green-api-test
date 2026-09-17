@@ -15,6 +15,7 @@ const BY_KIND: Partial<Record<GreenApiErrorKind, string>> = {
   unauthorized: 'The instance rejected these credentials. Change credentials and try again.',
   suspended: 'This GREEN-API account is suspended. Check its status in the dashboard.',
   instanceUnavailable: 'The instance is not ready. Authorize it in the dashboard, then try again.',
+  instanceStarting: 'The instance is restarting. Wait a few seconds and try again.',
   quotaExceeded: 'The plan quota is exhausted. Upgrade the plan or continue an existing chat.',
   rateLimited: 'Too many requests to this instance. Wait a few seconds and try again.',
   lookupLimited:

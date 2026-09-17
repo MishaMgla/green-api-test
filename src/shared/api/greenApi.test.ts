@@ -119,6 +119,8 @@ test.each<[number, string, GreenApiErrorKind]>([
   [401, 'Unauthorized', 'unauthorized'],
   [403, 'Forbidden', 'unauthorized'],
   [403, 'Your account is suspended', 'suspended'],
+  // Both bodies contain "starting"; only the first one resolves without the console.
+  [400, 'instance in starting process try later', 'instanceStarting'],
   [400, 'instance is starting or not authorized', 'instanceUnavailable'],
   [400, 'Message cannot be received because custom webhook url is set', 'instanceUnavailable'],
   [400, 'bad request data', 'transport'],

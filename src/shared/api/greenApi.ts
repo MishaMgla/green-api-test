@@ -20,8 +20,10 @@ export type GreenApiErrorKind =
   | 'unauthorized'
   /** The account is temporarily restricted by the provider. */
   | 'suspended'
-  /** The instance is not authorized, starting, expired, or still has a webhook URL. */
+  /** The instance is not authorized, expired, or still has a webhook URL. */
   | 'instanceUnavailable'
+  /** The instance is restarting (400 "instance in starting process"): retry shortly. */
+  | 'instanceStarting'
   /** Plan quota exceeded (466). */
   | 'quotaExceeded'
   /** Per-instance rate limit (429): retry shortly. */
@@ -69,8 +71,13 @@ function statusKind(status: number, body: string): GreenApiErrorKind {
   if (status === 429) return 'rateLimited'
   if (status === 469) return 'lookupLimited'
   if (status === 466) return 'quotaExceeded'
-  if (status === 400 && /not authorized|starting|webhook url|expired|deleted/i.test(body)) {
-    return 'instanceUnavailable'
+  if (status === 400) {
+    // "in starting process" resolves itself in seconds; "starting or not authorized"
+    // needs the console. Both bodies contain "starting", so the narrow one goes first.
+    if (/starting process/i.test(body)) return 'instanceStarting'
+    if (/not authorized|starting|webhook url|expired|deleted/i.test(body)) {
+      return 'instanceUnavailable'
+    }
   }
   return 'transport'
 }
