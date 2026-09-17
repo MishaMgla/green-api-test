@@ -35,7 +35,7 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
       />
       <main
         className={`flex min-w-0 flex-1 flex-col ${
-          selected ? 'bg-linear-to-b from-chat-from to-chat-to' : 'bg-app'
+          selected ? 'bg-linear-[28deg] from-chat-from from-[8.03%] to-chat-to to-[91.51%]' : 'bg-app'
         }`}
       >
         {/* A thin strip, never a spinner over the workspace: the chat, its messages and
