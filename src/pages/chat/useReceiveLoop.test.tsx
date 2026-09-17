@@ -291,26 +291,48 @@ test('transient failures back off, cap, and reset after a successful cycle', asy
   const calls = stubFetch()
   await mount()
 
-  last(calls).fail(500)
-  await settle(999)
-  expect(receives(calls)).toHaveLength(1)
-  await settle(1)
-  expect(receives(calls)).toHaveLength(2)
-
-  // A second consecutive failure waits twice as long.
-  last(calls).fail(500)
-  await settle(1000)
-  expect(receives(calls)).toHaveLength(2)
-  await settle(1000)
-  expect(receives(calls)).toHaveLength(3)
+  // The whole ladder, then one repeat of the capped step: each delay is checked just
+  // before its boundary, where the next receive must not have been issued yet.
+  let issued = 1
+  for (const seconds of [1, 2, 4, 8, 16, 30, 30]) {
+    last(calls).fail(500)
+    await settle(seconds * 1000 - 1)
+    expect(receives(calls)).toHaveLength(issued)
+    await settle(1)
+    issued += 1
+    expect(receives(calls)).toHaveLength(issued)
+  }
 
   // A successful cycle resets the delay to its first step.
   last(calls).resolve(null)
   await settle()
-  expect(receives(calls)).toHaveLength(4)
+  expect(receives(calls)).toHaveLength(issued + 1)
   last(calls).fail(500)
-  await settle(1000)
-  expect(receives(calls)).toHaveLength(5)
+  await settle(999)
+  expect(receives(calls)).toHaveLength(issued + 1)
+  await settle(1)
+  expect(receives(calls)).toHaveLength(issued + 2)
+})
+
+test('a restarting instance backs off and resumes on its own', async () => {
+  const calls = stubFetch()
+  await mount()
+
+  last(calls).fail(400, '{"message":"instance in starting process try later"}')
+  await settle()
+  // The provider resolves this itself, so nothing is surfaced for a manual retry.
+  expect(screen.getByRole('button')).toHaveTextContent('polling')
+  await settle(999)
+  expect(receives(calls)).toHaveLength(1)
+  await settle(1)
+  expect(receives(calls)).toHaveLength(2)
+  expect(live(calls)).toHaveLength(1)
+
+  // Contrast: a credentials failure on the same loop still pauses it.
+  last(calls).fail(401)
+  await settle(60_000)
+  expect(screen.getByRole('button')).toHaveTextContent('unauthorized')
+  expect(receives(calls)).toHaveLength(2)
 })
 
 test('an authentication failure pauses the owner until the same owner is retried', async () => {
