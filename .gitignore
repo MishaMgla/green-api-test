@@ -5,3 +5,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# agent working notes, not project documentation
+.claude/
