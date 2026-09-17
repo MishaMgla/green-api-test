@@ -2,5 +2,7 @@
 
 GREEN-API test assignment.
 
-The specification has not been received yet — this repository is prepared for the
-implementation to come. Conventions live in [CLAUDE.md](CLAUDE.md).
+The [specification](specs/original-spec.md), reviewed
+[implementation plan](docs/implementation-plan.md), and
+[technical tasks](docs/technical-tasks.md) are available. Implementation has not
+started. Conventions live in [CLAUDE.md](CLAUDE.md).

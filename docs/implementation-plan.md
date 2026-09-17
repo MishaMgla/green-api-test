@@ -1,86 +1,63 @@
 # Implementation plan
 
-Read this before implementing the assignment from
-[../specs/original-spec.md](../specs/original-spec.md). Reviewed in a two-round
-debate with Codex; the decisions below are the reconciled result.
+Read this before implementing or checking coverage of the
+[assignment](../specs/original-spec.md). Follow the executable breakdown in
+[technical-tasks.md](technical-tasks.md); decisions live in
+[architecture.md](architecture.md).
 
-## Stack
+## Review result — 2026-09-17
 
-Vite + React + TypeScript, Tailwind CSS, TanStack Query, Feature-Sliced Design.
-Tests are written alongside each step: Vitest + React Testing Library.
-No router, no extra state manager, no GREEN-API SDK — the spec pins the two raw
-HTTP methods
-([SendMessage](https://green-api.com/v3/docs/api/sending/SendMessage/),
-[HTTP API receiving](https://green-api.com/v3/docs/api/receiving/technology-http-api/)).
-Styling replicates the MAX web look from `specs/max-web-reference/` with
-Tailwind utilities (palette/typography extracted into the Tailwind theme).
+The original plan covered the happy path but needed the following corrections.
+These are incorporated into the architecture and technical tasks.
 
-## Architecture (FSD layers)
+1. **Resolve the recipient before creating the chat.** Use
+   [CheckAccount](https://green-api.com/v3/docs/api/service/CheckAccount/) to
+   obtain the canonical MAX chat ID. The specification fixes the sending and
+   receiving methods; it does not prohibit recipient lookup. This removes the
+   phone-to-ID re-keying heuristic and keeps replies in the original chat even
+   when a notification omits the phone number. Validate against the supported
+   phone formats, not an arbitrary 7–15 digit range. See the provider's
+   [chat-ID guidance](https://green-api.com/v3/docs/api/chat-id/).
+2. **Give queue consumption one explicit owner.** Replace the unspecified
+   continuous query with a cancellable serial receive loop. Cache queries must
+   not start additional consumers on focus, reconnect, or remount.
+3. **Merge before acknowledging.** The previous step order deleted before
+   merging. Record a supported message first, then acknowledge its receipt;
+   retries must not duplicate it. Handle unsuccessful deletion bodies as well
+   as HTTP errors. See
+   [DeleteNotification](https://green-api.com/v3/docs/api/receiving/technology-http-api/DeleteNotification/).
+4. **Complete session and send lifecycles.** Abort work, cancel retry timers,
+   clear session data, and reject late results after credentials change. Capture
+   the destination when sending; changing the selected chat must not redirect
+   the result. Never automatically retry an uncertain send.
+5. **Complete instance setup and errors.** Echo recovery depends on enabling
+   [outgoing API notifications](https://green-api.com/v3/docs/api/receiving/notifications-format/outgoing-message/OutgoingApiMessage/).
+   A suspended-account 403 is not necessarily a bad token; preserve drafts and
+   give the relevant recovery action.
+6. **Make verification explicit.** Add create-chat acceptance checks, DELETE
+   preflight coverage, and a real send/reply test from the intended serving
+   origin. A localhost proxy alone does not establish production compatibility.
 
-```
-src/
-  app/        providers (QueryClientProvider), global styles, root composition
-  pages/chat/ the single page: login screen vs chat screen
-  widgets/    sidebar (chat list + new-chat input), chat-window (messages + composer)
-  features/   auth (login form), send-message, create-chat
-  entities/   session (credentials), chat, message (types + mapping + UI bits)
-  shared/     api (greenApi client), lib (phone helpers), ui primitives
-```
+## Requirement coverage
 
-- `shared/api/greenApi.ts` — `sendMessage`, `receiveNotification`,
-  `deleteNotification`. `apiUrl` comes from the login form (prefilled
-  `https://api.green-api.com`; the dashboard may issue a regional host). Never
-  log request URLs or raw errors — the token is in the URL path.
-- Pure helpers: phone validation/normalization (7–15 digits →
-  `<digits>@c.us`, no country-code guessing) in `shared/lib`;
-  notification→Message mapping (`textMessage` and `extendedTextMessage`; every
-  other type discarded) in `entities/message`.
-- State: credentials in `entities/session` (memory only). Chats/messages live
-  in the TanStack Query cache under `['chats']`: the send mutation and the
-  polling loop write into it via `queryClient.setQueryData`; widgets read it
-  with `useQuery`. Send = `useMutation`; receive = one continuous long-poll
-  query (immediate refetch, Query's retry/backoff for failures). The
-  `seenIdMessages` set lives beside the cache writer so both paths share it.
+| Assignment requirement | Implementation | Task |
+|---|---|---|
+| React UI | Vite React application | T01 |
+| Enter GREEN-API credentials | Memory-only session and login form | T04 |
+| Enter phone and create chat | Validate, resolve, select canonical chat | T05 |
+| Match the saved MAX reference | Sidebar, conversation, composer | T06 |
+| Send text with SendMessage | Explicit send mutation | T07 |
+| Receive text through HTTP API | Receive, merge, acknowledge loop | T08 |
+| See the recipient's reply in the chat | Shared canonical chat ID | T05, T08, T10 |
+| Minimal feature set | Text and direct chats only | All |
 
-## Key behaviors
+## Completion boundary
 
-- **Send** — disable the composer while a POST is pending; reject
-  whitespace-only input; `maxLength=4000`; keep the text on failure. Append the
-  message after a 200 response only if its `idMessage` is not already in
-  `seenIdMessages` (echo race guard), then record it. No delivery indicators —
-  a 200 means queued, not delivered.
-- **Receive** — one session-keyed long-poll loop (`receiveTimeout=20`). Every
-  notification that carries a `receiptId` is deleted, including unknown and
-  malformed ones; a failed delete counts as a polling failure and triggers
-  backoff. Deduplicate by `idMessage`. An incoming chatId that matches no chat:
-  exact-digit match against a phone-keyed chat re-keys that chat to the API
-  chatId (used for subsequent sends); absent or ambiguous sender data creates a
-  new chat — never a fuzzy merge. An `outgoingAPIMessageReceived` echo not in
-  `seenIdMessages` is appended as outgoing (covers a lost POST response).
-  `AbortError` on logout/unmount is silent.
-- **Errors** — in-place banner; only 401/403 offers re-entering credentials.
-  No eager credential validation: the polling loop is the first API call
-  (an eager `receiveNotification` would claim the queue head).
+No attachments, groups UI, contact sync, history API, read receipts, typing
+indicators, router, or persistent credentials/messages. Reload starts a fresh
+local session; acknowledged messages are not restored.
 
-## Steps
-
-Each step lands with its tests (Vitest; React Testing Library for components
-and hooks); `npm run build` and `vitest run` are the check loop throughout.
-
-1. Scaffold Vite react-ts + Tailwind + TanStack Query + Vitest/RTL, FSD folder
-   skeleton. **CORS spike**: a real browser POST plus a long poll against a
-   live instance. Only if it fails on localhost, add a minimal Vite dev proxy —
-   not speculatively.
-2. `shared/api` client + pure helpers with unit tests (phone validation,
-   notification mapping, dedup). Verify real MAX notification payload fields
-   here — the docs are thin on `senderData`.
-3. `features/auth` login form (+ component test).
-4. Extract colors/typography/layout from the saved reference pages into the
-   Tailwind theme (local assets only, desktop-first); static chat UI widgets.
-5. Send flow: `useMutation` + cache write (+ hook test with mocked API).
-6. Polling receive loop query: process → delete → merge into `['chats']`
-   (+ hook test covering dedup, chat re-keying, unknown-type deletion).
-7. Error/empty/loading states; README (credentials setup; instance must have
-   `incomingWebhook: yes` and an empty `webhookUrl`; the app drains the
-   instance notification queue, so it needs exclusive polling use of the
-   instance); `docs/architecture.md`.
+The repository currently contains documentation and saved references only.
+All technical tasks remain open. Live CORS and send/reply validation require a
+user-provided authorized MAX instance and test recipient; neither has been
+verified during this documentation review.

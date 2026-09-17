@@ -23,6 +23,7 @@ file when you work on its topic — never load `docs/` as a whole.
 | [docs/conventions/documentation.md](docs/conventions/documentation.md) | Writing or changing documentation |
 | [docs/conventions/git.md](docs/conventions/git.md) | Committing, branching, opening a PR |
 | [docs/implementation-plan.md](docs/implementation-plan.md) | Implementing the assignment |
-| `docs/architecture.md` | Will appear together with the specification |
+| [docs/technical-tasks.md](docs/technical-tasks.md) | Executing tasks and checking acceptance criteria |
+| [docs/architecture.md](docs/architecture.md) | Implementing state, chat identity, or API integration |
 
 `AGENTS.md` is a symlink to this file, so Codex and Claude read the same source.
