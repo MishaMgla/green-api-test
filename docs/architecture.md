@@ -49,7 +49,9 @@ Represent no-account, unavailable-instance, and lookup failures separately.
 
 Use the canonical chat ID as a string everywhere. Repeated creation selects
 the existing chat; if reception creates it during lookup, merge by that same ID.
-Do not infer identity from names or optional sender phone data. This follows
+Do not infer identity from names or optional sender phone data. In MAX the
+canonical chat ID is a bare numeric account ID, not the `<phone>@c.us` form the
+provider's examples show, so it cannot be derived from the number. This follows
 [GREEN-API's recommendation](https://green-api.com/v3/docs/api/chat-id/).
 
 Send and receive share one idempotent message insertion function, keyed by chat
