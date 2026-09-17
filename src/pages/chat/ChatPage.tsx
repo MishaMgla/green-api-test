@@ -54,7 +54,7 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
                 <button
                   type="button"
                   onClick={retry}
-                  className="bg-accent focus-visible:outline-accent rounded-lg px-3 py-1 font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent rounded-lg px-3 py-1 font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   Retry
                 </button>
@@ -62,7 +62,7 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
                   <button
                     type="button"
                     onClick={onChangeCredentials}
-                    className="text-accent focus-visible:outline-accent rounded px-1 py-1 hover:underline focus-visible:outline-2"
+                    className="text-accent focus-visible:outline-accent rounded px-1 py-1 hover:bg-ghost-hover hover:underline focus-visible:outline-2"
                   >
                     Change credentials
                   </button>

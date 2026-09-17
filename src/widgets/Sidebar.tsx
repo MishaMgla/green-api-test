@@ -19,7 +19,7 @@ export function Sidebar({ chats, selectedId, onSelect, onChangeCredentials }: Si
         <button
           type="button"
           onClick={onChangeCredentials}
-          className="text-accent focus-visible:outline-accent rounded px-2 py-1 text-[13px]/4 hover:underline focus-visible:outline-2"
+          className="text-accent focus-visible:outline-accent rounded px-2 py-1 text-[13px]/4 hover:bg-ghost-hover hover:underline focus-visible:outline-2"
         >
           Change credentials
         </button>

@@ -56,7 +56,7 @@ function login(overrides: Partial<Credentials> = {}) {
   const fields = { ...CREDENTIALS, ...overrides }
   fireEvent.change(screen.getByLabelText('Instance ID'), { target: { value: fields.idInstance } })
   fireEvent.change(screen.getByLabelText('API token'), { target: { value: fields.apiTokenInstance } })
-  fireEvent.change(screen.getByLabelText('Dashboard API origin'), { target: { value: fields.apiUrl } })
+  fireEvent.change(screen.getByLabelText('API URL'), { target: { value: fields.apiUrl } })
   fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
 }
 

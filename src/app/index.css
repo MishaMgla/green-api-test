@@ -15,6 +15,10 @@
   --color-muted: #06070885;
   --color-divider: #0c0d0e0f;
   --color-accent: #007aff;
+  /* Primary button interaction states, transcribed from the reference. */
+  --color-accent-hover: #479fff;
+  --color-accent-pressed: #006ee5;
+  --color-ghost-hover: #0d0d0d0a;
 
   /* Bubbles */
   --color-bubble-in: #fff;

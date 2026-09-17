@@ -125,7 +125,7 @@ export function Composer({
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className="bg-accent focus-visible:outline-accent flex size-10 shrink-0 items-center justify-center rounded-xl text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent flex size-10 shrink-0 items-center justify-center rounded-xl text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <SendIcon />
           </button>

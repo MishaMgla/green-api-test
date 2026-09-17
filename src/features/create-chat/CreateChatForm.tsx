@@ -74,7 +74,7 @@ export function CreateChatForm({ onSelect }: { onSelect: (chatId: string) => voi
       <button
         type="submit"
         disabled={lookup.isPending}
-        className="bg-accent focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 font-medium text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 font-medium text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         {lookup.isPending ? 'Checking…' : 'Create chat'}
       </button>
