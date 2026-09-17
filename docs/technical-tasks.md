@@ -2,7 +2,7 @@
 
 Read this when executing the [implementation plan](implementation-plan.md).
 Follow [architecture.md](architecture.md) for decisions and constraints.
-Every task is open; check it off only when its acceptance checks pass.
+Check a task off only when its acceptance checks pass.
 
 ## Execution and checks
 
@@ -56,8 +56,9 @@ Depends on: T02. Area: `src/entities/conversation`, `src/shared/lib`.
 
 Depends on: T02, T03. Area: `src/features/auth`, `src/entities/session`, app.
 
-- Add labeled instance ID, masked token, and dashboard API-origin fields with
-  local validation. Login starts a memory-only session; no eager queue probe.
+- Add labeled instance ID and masked token fields with local validation. The API
+  origin is fixed to `https://3100.api.green-api.com` at the user's request.
+  Login starts a memory-only session; no eager queue probe.
 - Create the session's QueryClient and empty non-fetching chat cache; provide
   a local change-credentials action and a guard for asynchronous completions.
 - Done when: invalid input cannot start a session; ending it aborts registered
@@ -84,7 +85,7 @@ Depends on: T04, T05. Area: widgets, `src/pages/chat`, app styles.
   palette, typography, spacing, sidebar, header, bubbles, and composer layout.
 - Compose the sidebar, new-chat form, selection, conversation, and composer.
   Keep per-chat drafts; provide empty states and scrolling for long threads.
-- Use local assets, English labels, accessible form names, visible keyboard
+- Use local assets, Russian labels (requested after implementation), accessible form names, visible keyboard
   focus, and readable contrast. Render message text without HTML interpretation.
 - Done when: browser comparison matches the relevant reference layout; long
   text wraps, the composer stays reachable, keyboard navigation works, and chat
@@ -131,6 +132,20 @@ Depends on: T05–T08. Area: auth, chat page, widgets.
 ## T10 — [ ] Verify the assignment and document the handoff
 
 Depends on: T01–T09, including successful live checks from T02.
+
+Live validation on 2026-09-17: the supplied MAX instance is authorized,
+incoming/API-echo notifications are enabled, and no webhook URL is configured.
+Browser requests from localhost passed for chat listing, contact details, and
+history in two direct chats; the available contact photo also loaded. One rapid
+history request returned a rate limit and succeeded on manual retry.
+
+A subsequent browser test resolved the agreed recipient, sent the approved test
+message successfully, and displayed its API echo without duplication. The
+provider rejected acknowledgement with `result: false` and a receipt-not-found
+reason; subsequent receives returned HTTP 408. The user confirmed receipt of
+the test message and that another client was using the same instance. The user
+explicitly approved deployment without waiting for a reply. Incoming-reply and
+exclusive-queue acknowledgement verification remain uncompleted; T10 stays open.
 
 - From the intended serving origin, enter runtime credentials, create a chat
   by phone, send text, reply from MAX, and confirm the reply appears in that

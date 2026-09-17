@@ -6,10 +6,10 @@ test('a polling loop says nothing at all', () => {
 })
 
 test.each<[GreenApiErrorKind, RegExp]>([
-  ['unauthorized', /credentials/i],
-  ['suspended', /suspended/i],
-  ['instanceUnavailable', /authorize it in the dashboard/i],
-  ['quotaExceeded', /quota/i],
+  ['unauthorized', /данные входа/i],
+  ['suspended', /заблокирован/i],
+  ['instanceUnavailable', /Авторизуйте его в личном кабинете/i],
+  ['quotaExceeded', /Лимит тарифа/i],
 ])('a pause on %s explains that kind and asks for a retry', (kind, expected) => {
   const status = receiveStatus({ status: 'paused', kind })
   expect(status?.message).toMatch(expected)
@@ -25,14 +25,14 @@ test('a suspended account does not read like rejected credentials', () => {
 })
 
 test('a pause on an unclassified kind still tells the user what to do', () => {
-  expect(receiveStatus({ status: 'paused', kind: 'transport' })?.message).toMatch(/dashboard/i)
+  expect(receiveStatus({ status: 'paused', kind: 'transport' })?.message).toMatch(/личном кабинете/i)
 })
 
 test.each<GreenApiErrorKind>(['transport', 'rateLimited', 'instanceStarting', 'notAcknowledged'])(
   'retrying after %s is one waiting line with no action',
   (kind) => {
     expect(receiveStatus({ status: 'retrying', kind })).toEqual({
-      message: 'Reconnecting to the instance…',
+      message: 'Восстанавливаем соединение…',
       changeCredentials: false,
     })
   },

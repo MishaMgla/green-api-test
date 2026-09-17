@@ -43,15 +43,12 @@ nothing is pushed anywhere — the app pulls from the queue.
 
 ## Logging in
 
-Enter `idInstance`, `apiTokenInstance` and the API URL from the dashboard.
-
-Use the instance's own host, `https://<prefix>.api.green-api.com`, as the
-dashboard shows it. The shared `https://api.green-api.com` serves the same
-methods but is throttled across accounts.
+Enter `idInstance` and `apiTokenInstance` from the dashboard. The API host is
+fixed to `https://3100.api.green-api.com`; there is no API URL input.
 
 Credentials live in memory for the session only. They are never written to
 `localStorage`, `sessionStorage`, a cookie, a query key or a log, so a reload is
-a new login. "Change credentials" ends the session and clears everything with it.
+a new login. "Сменить данные" ends the session and clears everything with it.
 
 ## Exclusive queue ownership
 
@@ -80,13 +77,18 @@ checked against MAX before the chat is created.
 
 ## What the app keeps
 
-Nothing, deliberately. Chat history lives in memory for the session: reloading
-the page or changing credentials starts empty. The assignment asks for the send
-and receive flow, not for storage — and anything persisted would be a copy of
-someone's correspondence on their disk.
+Credentials, drafts, contacts, and loaded messages stay in memory. Reloading the
+page or changing credentials clears the local session and chat list.
 
-Messages already delivered stay in MAX itself. A chat reappears as soon as a new
-message arrives in it.
+Opening a chat loads its available text history from GREEN-API and retrieves the
+contact's name and avatar. Older messages can be requested with “Загрузить ещё”.
+History is merged with live messages by message ID, so an API echo does not create
+a duplicate. Reopen a conversation by its phone number after logging in again to
+load the provider's available history. Availability is limited by GREEN-API's
+[history retention](https://green-api.com/v3/docs/api/journals/GetChatHistory/).
+
+The interface is in Russian and follows the saved MAX reference. Missing or
+private contact photos use initials.
 
 ## Scope
 

@@ -15,6 +15,7 @@ export type Chat = {
   /** Canonical provider chat ID, kept as a string. */
   id: string
   name: string
+  avatarUrl?: string
   messages: Message[]
 }
 
@@ -62,7 +63,10 @@ export function mapNotification(body: unknown): MappedNotification {
   const id = envelope.idMessage
   if (typeof id !== 'string' || id === '') return MALFORMED
 
-  const chatName = typeof sender.chatName === 'string' && sender.chatName !== '' ? sender.chatName : chatId
+  // An outgoing echo's sender is our own account, not the recipient.
+  const names = outgoing ? [sender.chatName] : [sender.senderContactName, sender.chatName, sender.senderName]
+  const chatName = names
+    .find((name): name is string => typeof name === 'string' && name.trim() !== '') ?? chatId
   // An infinite or absent timestamp falls back to arrival time; it never drops a message.
   const seconds = envelope.timestamp
   const fromServer = Number.isFinite(seconds)
@@ -72,7 +76,7 @@ export function mapNotification(body: unknown): MappedNotification {
 
 /**
  * Inserts a message into the chats cache, creating the chat when needed.
- * Idempotent on chat ID + message ID and preserving arrival order; returns the
+ * Idempotent on chat ID + message ID and ordered by timestamp; returns the
  * same array when the message is already known and carries nothing new. Shared
  * by send and receive.
  */
@@ -85,20 +89,51 @@ export function insertMessage(
   const index = chats.findIndex((chat) => chat.id === chatId)
   if (index === -1) return [...chats, { id: chatId, name: chatName, messages: [message] }]
   const chat = chats[index]
-  const known = chat.messages.find((existing) => existing.id === message.id)
-  let messages: Message[]
-  if (!known) {
-    messages = [...chat.messages, message]
-  } else if (message.fromServer && !known.fromServer) {
-    // The send response and the provider's echo are the same message. Only the echo
-    // carries the server timestamp, so it replaces the local one whichever way round
-    // the two arrive, in place and without a second message.
-    messages = chat.messages.map((existing) =>
-      existing === known ? { ...known, timestamp: message.timestamp, fromServer: true } : existing,
-    )
-  } else {
-    return chats
-  }
-  const updated = { ...chat, messages }
+  const messages = mergeMessages(chat.messages, [message])
+  const name = chatName !== chatId ? chatName : chat.name
+  if (messages === chat.messages && name === chat.name) return chats
+  const updated = { ...chat, name, messages }
   return chats.map((existing, position) => (position === index ? updated : existing))
+}
+
+/** The same merge handles late history, received messages, and send echoes. */
+function mergeMessages(existing: Message[], incoming: Message[]): Message[] {
+  const messages = new Map(existing.map((message) => [message.id, message]))
+  let changed = false
+  for (const message of incoming) {
+    const known = messages.get(message.id)
+    if (!known || (message.fromServer && !known.fromServer)) {
+      messages.set(message.id, known ? { ...known, timestamp: message.timestamp, fromServer: true } : message)
+      changed = true
+    }
+  }
+  return changed ? [...messages.values()].sort((a, b) => a.timestamp - b.timestamp) : existing
+}
+
+/** Validates the flat MAX history format through the notification mapper. */
+export function mergeHistory(chats: Chat[], chatId: string, history: unknown[]): Chat[] {
+  const messages: Message[] = []
+  let chatName: string | undefined
+  for (const item of history) {
+    const record = asRecord(item)
+    if (!record || record.chatId !== chatId || !['incoming', 'outgoing'].includes(String(record.type))) continue
+    const mapped = mapNotification({
+      ...record,
+      typeWebhook: record.type === 'outgoing' ? 'outgoingAPIMessageReceived' : 'incomingMessageReceived',
+      senderData: { ...record, chatName: record.senderContactName || record.senderName },
+      messageData: {
+        typeMessage: record.typeMessage,
+        textMessageData: { textMessage: record.textMessage },
+        extendedTextMessageData: { text: record.textMessage ?? asRecord(record.extendedTextMessage)?.text },
+      },
+    })
+    if (mapped.type !== 'message') continue
+    messages.push(mapped.message)
+    if (!mapped.message.outgoing && mapped.chatName !== chatId) chatName ??= mapped.chatName
+  }
+  return chats.map((chat) => chat.id === chatId ? {
+    ...chat,
+    name: chat.name === chatId ? chatName ?? chat.name : chat.name,
+    messages: mergeMessages(chat.messages, messages),
+  } : chat)
 }

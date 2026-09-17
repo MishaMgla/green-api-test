@@ -13,19 +13,19 @@ export type ReceiveStatus = {
 // than a single request having failed.
 const PAUSED: Partial<Record<GreenApiErrorKind, string>> = {
   unauthorized:
-    'The instance rejected these credentials, so new messages are not arriving. Change credentials to start receiving again.',
+    'Инстанс отклонил данные входа, поэтому новые сообщения не поступают. Измените данные входа, чтобы возобновить получение.',
   suspended:
-    'This GREEN-API account is suspended, so new messages are not arriving. Check its status in the dashboard, then retry.',
+    'Аккаунт GREEN-API заблокирован, поэтому новые сообщения не поступают. Проверьте его статус в личном кабинете и повторите попытку.',
   instanceUnavailable:
-    'The instance is not ready, so new messages are not arriving. Authorize it in the dashboard and clear its webhook URL, then retry.',
+    'Инстанс не готов, поэтому новые сообщения не поступают. Авторизуйте его в личном кабинете, очистите адрес вебхука и повторите попытку.',
   quotaExceeded:
-    'The plan quota is exhausted, so new messages are not arriving. Upgrade the plan, then retry.',
+    'Лимит тарифа исчерпан, поэтому новые сообщения не поступают. Смените тариф и повторите попытку.',
 }
 
 /** A pause the loop reported without a known cause still tells the user what to do. */
-const PAUSED_UNKNOWN = 'New messages are not arriving. Check the instance in the dashboard, then retry.'
+const PAUSED_UNKNOWN = 'Новые сообщения не поступают. Проверьте инстанс в личном кабинете и повторите попытку.'
 /** Every recoverable kind waits the same way, so no kind-specific advice is useful. */
-const RETRYING = 'Reconnecting to the instance…'
+const RETRYING = 'Восстанавливаем соединение…'
 
 /**
  * Credential-free guidance for a receive state. `null` is the normal long poll: it

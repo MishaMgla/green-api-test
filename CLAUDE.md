@@ -10,7 +10,7 @@ file when you work on its topic — never load `docs/` as a whole.
 
 ## Always
 
-- Everything in English: documentation, code, identifiers, replies and commit messages.
+- Documentation, code, identifiers, replies and commit messages are in English; UI text is in Russian.
 - Invent nothing beyond the specification. No requirement, no code.
 - Credentials (`idInstance`, `apiTokenInstance`) stay in the user's runtime and
   never enter the repository.

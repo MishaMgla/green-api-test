@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { Credentials } from '../../shared/api/greenApi'
 import { validateCredentials, type CredentialErrors } from './credentials'
 
-const EMPTY: Credentials = { idInstance: '', apiTokenInstance: '', apiUrl: '' }
+const EMPTY: Credentials = { idInstance: '', apiTokenInstance: '' }
 
 /** `note` is always visible: every value is copied from the instance page, and the
     placeholder alone reads as a value that is already filled in. */
@@ -15,24 +15,17 @@ const FIELDS: {
 }[] = [
   {
     name: 'idInstance',
-    label: 'Instance ID',
+    label: 'ID инстанса',
     type: 'text',
     hint: '1101000001',
-    note: 'idInstance from your instance page in the GREEN-API console.',
+    note: 'idInstance со страницы инстанса в личном кабинете GREEN-API.',
   },
   {
     name: 'apiTokenInstance',
-    label: 'API token',
+    label: 'Токен API',
     type: 'password',
     hint: '',
-    note: 'apiTokenInstance from the same page.',
-  },
-  {
-    name: 'apiUrl',
-    label: 'API URL',
-    type: 'text',
-    hint: 'https://1101.api.green-api.com',
-    note: 'apiUrl from the same page. It is specific to your instance, so the example above will not work.',
+    note: 'apiTokenInstance с той же страницы.',
   },
 ]
 
@@ -46,7 +39,6 @@ export function LoginForm({ onSubmit }: { onSubmit: (credentials: Credentials) =
     const trimmed: Credentials = {
       idInstance: fields.idInstance.trim(),
       apiTokenInstance: fields.apiTokenInstance.trim(),
-      apiUrl: fields.apiUrl.trim(),
     }
     const found = validateCredentials(trimmed)
     setErrors(found)
@@ -60,7 +52,7 @@ export function LoginForm({ onSubmit }: { onSubmit: (credentials: Credentials) =
         onSubmit={submit}
         className="bg-sidebar flex w-full max-w-md flex-col gap-4 rounded-2xl p-6 shadow-[0_4px_16px_#00000014,0_0_2px_#00000014]"
       >
-        <h1 className="text-lg font-semibold">GREEN-API MAX chat</h1>
+        <h1 className="text-lg font-semibold">Чат MAX · GREEN-API</h1>
         {FIELDS.map(({ name, label, type, hint, note }) => (
           <div key={name} className="flex flex-col gap-1">
             <label htmlFor={name}>{label}</label>
@@ -91,7 +83,7 @@ export function LoginForm({ onSubmit }: { onSubmit: (credentials: Credentials) =
           type="submit"
           className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          Log in
+          Войти
         </button>
       </form>
     </main>

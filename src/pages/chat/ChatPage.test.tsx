@@ -7,19 +7,20 @@ import type { Credentials } from '../../shared/api/greenApi'
 const CREDENTIALS: Credentials = {
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
-  apiUrl: 'https://1101.api.green-api.com',
 }
 
 /** Answers one request: 200 with `body`, or the given failure status. */
 type Receive = (body: unknown, status?: number) => void
 
-/** Answers the page's receive loop by hand; nothing else in these tests fetches. */
+/** Answers receive requests by hand; chat details use empty fixture responses. */
 function stubFetch(): Receive[] {
   const answers: Receive[] = []
   vi.stubGlobal(
     'fetch',
-    (_input: string, init?: RequestInit) =>
-      new Promise((resolve, reject) => {
+    (input: string, init?: RequestInit) => {
+      if (input.includes('/getChatHistory')) return Promise.resolve({ ok: true, status: 200, text: async () => '[]' })
+      if (input.includes('/getContactInfo')) return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify({ chatId: JSON.parse(String(init?.body)).chatId, chatType: 'user', name: '', contactName: '', avatar: '' }) })
+      return new Promise((resolve, reject) => {
         // Aborting must reject, exactly as fetch does: otherwise `request()` never
         // reaches its finally and its deadline timer outlives the unmounted page.
         const signal = init?.signal
@@ -29,7 +30,8 @@ function stubFetch(): Receive[] {
         answers.push((body, status = 200) =>
           resolve({ ok: status < 400, status, text: async () => JSON.stringify(body) }),
         )
-      }),
+      })
+    },
   )
   return answers
 }
@@ -54,7 +56,7 @@ function renderPage(onChangeCredentials: () => void = () => {}) {
   return session
 }
 
-const composer = () => screen.getByLabelText('Message')
+const composer = () => screen.getByLabelText('Сообщение')
 const chatButton = (name: string) => screen.getByRole('button', { name: new RegExp(name) })
 const open = (name: string) => fireEvent.click(chatButton(name))
 const type = (text: string) => fireEvent.change(composer(), { target: { value: text } })
@@ -67,7 +69,7 @@ afterEach(() => {
 test('switching chats preserves the correct per-chat draft', () => {
   stubFetch()
   renderPage()
-  expect(composer()).toBeDisabled()
+  expect(screen.queryByLabelText('Сообщение')).toBeNull()
 
   open('Alice')
   type('for Alice')
@@ -105,7 +107,7 @@ test('an incoming chat is added without stealing the current selection', async (
 
   // Carol on screen is the outcome to wait for; everything else is asserted after it.
   await screen.findByRole('button', { name: /Carol/ })
-  const chats = within(screen.getByRole('list', { name: 'Chats' })).getAllByRole('listitem')
+  const chats = within(screen.getByRole('list', { name: 'Чаты' })).getAllByRole('listitem')
   expect(chats.map((item) => item.textContent)).toEqual([
     expect.stringContaining('Alice'),
     expect.stringContaining('Bob'),
@@ -125,10 +127,10 @@ test('a transient receive failure shows one quiet line, with or without a chat o
   answers[0]('', 500)
 
   const waiting = await screen.findByRole('status')
-  expect(waiting).toHaveTextContent(/reconnecting/i)
+  expect(waiting).toHaveTextContent(/восстанавливаем/i)
   // Nothing to act on, and the empty-selection state is untouched behind it.
   expect(within(waiting).queryByRole('button')).toBeNull()
-  expect(screen.getByText('Select a chat to start writing.')).toBeVisible()
+  expect(screen.getByText('Выберите чат, чтобы начать общение')).toBeVisible()
 })
 
 test('a paused receive loop keeps the chat and its draft while offering a retry', async () => {
@@ -141,14 +143,14 @@ test('a paused receive loop keeps the chat and its draft while offering a retry'
   answers[0]('', 401)
 
   const paused = await screen.findByRole('alert')
-  expect(paused).toHaveTextContent(/credentials/i)
+  expect(paused).toHaveTextContent(/данные/i)
   expect(paused.textContent).not.toContain(CREDENTIALS.apiTokenInstance)
   // The workspace survives the failure: same chat, same thread, same draft.
   expect(chatButton('Alice')).toHaveAttribute('aria-current', 'true')
-  expect(screen.getByRole('log', { name: 'Messages' })).toBeVisible()
+  expect(screen.getByRole('log', { name: 'Сообщения' })).toBeVisible()
   expect(composer()).toHaveValue('for Alice')
 
-  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+  fireEvent.click(within(paused).getByRole('button', { name: 'Повторить' }))
 
   // Recovery without a reload: the same owner receives again and the strip goes away.
   await waitFor(() => expect(answers).toHaveLength(2))
@@ -165,15 +167,15 @@ test('only rejected credentials offer to change them', async () => {
   answers[0]('', 466)
 
   const paused = await screen.findByRole('alert')
-  expect(paused).toHaveTextContent(/quota/i)
-  expect(within(paused).queryByRole('button', { name: 'Change credentials' })).toBeNull()
+  expect(paused).toHaveTextContent(/лимит/i)
+  expect(within(paused).queryByRole('button', { name: 'Сменить данные' })).toBeNull()
 
   // The same strip on rejected credentials does offer it, and it is the page's own action.
-  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+  fireEvent.click(within(paused).getByRole('button', { name: 'Повторить' }))
   await waitFor(() => expect(answers).toHaveLength(2))
   answers[1]('', 401)
 
   const rejected = await screen.findByRole('alert')
-  fireEvent.click(within(rejected).getByRole('button', { name: 'Change credentials' }))
+  fireEvent.click(within(rejected).getByRole('button', { name: 'Сменить данные' }))
   expect(onChangeCredentials).toHaveBeenCalledTimes(1)
 })

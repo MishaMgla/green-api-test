@@ -53,11 +53,11 @@ These are incorporated into the architecture and technical tasks.
 
 ## Completion boundary
 
-No attachments, groups UI, contact sync, history API, read receipts, typing
-indicators, router, or persistent credentials/messages. Reload starts a fresh
-local session; acknowledged messages are not restored.
+No attachments, groups UI, contact-list sync, read receipts, typing indicators,
+router, or persistent credentials/messages. Reload starts a fresh local session.
+The later user-requested extension loads available history and contact details
+when a chat is opened, and changes the interface language to Russian.
 
-The repository currently contains documentation and saved references only.
-All technical tasks remain open. Live CORS and send/reply validation require a
-user-provided authorized MAX instance and test recipient; neither has been
-verified during this documentation review.
+The application and automated checks are implemented. Live send/reply validation
+requires a user-provided authorized MAX instance and test recipient; that handoff
+check remains tracked in T10.

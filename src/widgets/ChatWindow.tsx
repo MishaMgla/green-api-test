@@ -1,16 +1,28 @@
-import { useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react'
+import { Fragment, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import type { Chat, Message } from '../entities/conversation/conversation'
 import { Avatar } from './Avatar'
-import { formatTime } from './format'
+import { formatDate, formatTime } from './format'
 
 /** Title bar of the open conversation: avatar, chat name, provider chat ID. */
-export function ChatHeader({ chat }: { chat: Chat }) {
+export function ChatHeader({ chat, onBack }: { chat: Chat; onBack?: () => void }) {
   return (
-    <header className="bg-sidebar border-divider flex items-center gap-3 border-b px-4 py-3">
-      <Avatar id={chat.id} name={chat.name} size="sm" />
+    <header className="bg-sidebar border-divider flex items-center h-[65px] shrink-0 gap-3 border-b px-4 py-3">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Назад к чатам"
+          className="hover:bg-ghost-hover focus-visible:outline-accent flex size-9 shrink-0 items-center justify-center rounded-full focus-visible:outline-2"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="size-6">
+            <path d="m14 5-7 7 7 7" />
+          </svg>
+        </button>
+      )}
+      <Avatar id={chat.id} name={chat.name} size="sm" url={chat.avatarUrl} />
       <div className="min-w-0">
         <h2 className="truncate text-[16px]/5 font-semibold">{chat.name}</h2>
-        <p className="text-muted truncate text-[13px]/4">Chat ID {chat.id}</p>
+        <p className="text-muted truncate text-[13px]/4">Личный чат</p>
       </div>
     </header>
   )
@@ -21,45 +33,73 @@ export function ChatHeader({ chat }: { chat: Chat }) {
  * and the timestamp sits inside the bubble, bottom right, over a reserved spacer so
  * that short messages keep sitting beside it.
  */
-export function Conversation({ messages }: { messages: Message[] }) {
+export function Conversation({ messages, children }: { messages: Message[]; children?: ReactNode }) {
   const history = useRef<HTMLDivElement>(null)
-  const lastId = messages[messages.length - 1]?.id
+  const previous = useRef({ firstId: '', lastId: '', height: 0, top: 0 })
+  const firstId = messages[0]?.id ?? ''
+  const lastId = messages[messages.length - 1]?.id ?? ''
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = history.current
-    if (element) element.scrollTop = element.scrollHeight
-  }, [lastId])
+    if (!element) return
+    const before = previous.current
+    if (firstId !== before.firstId && lastId === before.lastId && before.firstId) {
+      element.scrollTop = before.top + element.scrollHeight - before.height
+    } else if (lastId !== before.lastId && (
+      !before.lastId ||
+      before.height - before.top - element.clientHeight <= 1 ||
+      messages[messages.length - 1]?.outgoing
+    )) {
+      element.scrollTop = element.scrollHeight
+    }
+    previous.current = { firstId, lastId, height: element.scrollHeight, top: element.scrollTop }
+  })
 
   return (
-    <div ref={history} role="log" aria-label="Messages" className="flex-1 overflow-y-auto">
-      <ol className="mx-auto flex max-w-[732px] flex-col gap-px px-4 py-4">
-        {messages.map((message) => (
-          <li
-            key={message.id}
-            className={`flex ${message.outgoing ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`rounded-bubble relative max-w-[70%] px-2.5 pt-2 pb-2.5 ${
-                message.outgoing
-                  ? 'bg-bubble-out text-bubble-out-ink'
-                  : 'bg-bubble-in text-bubble-in-ink'
-              }`}
+    <div
+      ref={history}
+      role="log"
+      aria-label="Сообщения"
+      onScroll={(event) => { previous.current.top = event.currentTarget.scrollTop }}
+      className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]"
+    >
+      {children}
+      <ol className="mx-auto flex max-w-[732px] flex-col gap-0.5 px-4 py-4">
+        {messages.map((message, index) => (
+          <Fragment key={message.id}>
+            {(index === 0 || formatDate(messages[index - 1].timestamp) !== formatDate(message.timestamp)) && (
+              <li className="my-2 flex justify-center">
+                <span className="rounded-full bg-[#0f8ec285] px-2 text-[13px]/5 tracking-[0.2px] text-white">
+                  {formatDate(message.timestamp)}
+                </span>
+              </li>
+            )}
+            <li
+              className={`flex ${message.outgoing ? 'justify-end' : 'justify-start'}`}
             >
-              <p className="text-[16px]/5 break-words whitespace-pre-wrap">
-                {message.text}
-                {/* Reserves the last line's tail so the absolute timestamp cannot overlap it. */}
-                <span aria-hidden className="inline-block w-11" />
-              </p>
-              <time
-                dateTime={new Date(message.timestamp).toISOString()}
-                className={`absolute right-2.5 bottom-1.5 text-[12px]/4 tracking-[0.2px] ${
-                  message.outgoing ? 'text-bubble-out-time' : 'text-bubble-in-time'
+              <div
+                className={`rounded-bubble relative max-w-[70%] px-2.5 pt-2 pb-[11px] ${
+                  message.outgoing
+                    ? 'bg-bubble-out text-bubble-out-ink'
+                    : 'bg-bubble-in text-bubble-in-ink'
                 }`}
               >
-                {formatTime(message.timestamp)}
-              </time>
-            </div>
-          </li>
+                <p className="text-[16px]/5 break-words whitespace-pre-wrap">
+                  {message.text}
+                  {/* Reserves the last line's tail so the absolute timestamp cannot overlap it. */}
+                  <span aria-hidden className="inline-block w-11" />
+                </p>
+                <time
+                  dateTime={new Date(message.timestamp).toISOString()}
+                  className={`absolute right-2.5 bottom-1.5 text-[12px]/4 tracking-[0.2px] ${
+                    message.outgoing ? 'text-bubble-out-time' : 'text-bubble-in-time'
+                  }`}
+                >
+                  {formatTime(message.timestamp)}
+                </time>
+              </div>
+            </li>
+          </Fragment>
         ))}
       </ol>
     </div>
@@ -101,31 +141,31 @@ export function Composer({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[740px] px-4 pb-4">
+    <div className="mx-auto w-full max-w-[740px] shrink-0 px-4 pb-4">
       {/* Busy rather than a spinner: the draft stays visible and editable while the
           send is in flight, and the pending state is still announced and testable. */}
       <form onSubmit={submit} aria-busy={sending}>
-        <div className="bg-sidebar flex items-end gap-1 rounded-2xl p-1 shadow-[0_4px_16px_#00000014,0_0_2px_#00000014]">
+        <div className="composer-card bg-sidebar flex items-end gap-1 rounded-2xl p-1 shadow-[0_4px_16px_#00000014,0_0_2px_#00000014]">
           <label htmlFor="composer-text" className="sr-only">
-            Message
+            Сообщение
           </label>
           <textarea
             id="composer-text"
             name="message"
             rows={1}
             disabled={disabled}
-            placeholder={disabled ? 'Select a chat to write' : 'Write a message'}
+            placeholder={disabled ? 'Выберите чат' : 'Сообщение'}
             value={draft}
             aria-describedby={error ? 'composer-error' : undefined}
             onChange={(event) => onDraftChange(event.target.value)}
             onKeyDown={keyDown}
-            className="focus-visible:outline-accent field-sizing-content max-h-40 flex-1 resize-none rounded-xl px-3 py-2 text-[16px]/5 focus-visible:outline-2 focus-visible:-outline-offset-2"
+            className="field-sizing-content min-h-10 max-h-40 min-w-0 flex-1 resize-none rounded-xl px-3 py-2.5 text-[16px]/5 outline-none placeholder:text-muted"
           />
           <button
             type="submit"
             disabled={!canSend}
-            aria-label="Send message"
-            className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent flex size-10 shrink-0 items-center justify-center rounded-xl text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2"
+            aria-label="Отправить сообщение"
+            className="text-accent enabled:hover:bg-ghost-hover focus-visible:outline-accent flex size-10 shrink-0 items-center justify-center rounded-xl disabled:text-muted disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <SendIcon />
           </button>

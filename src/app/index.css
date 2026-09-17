@@ -41,3 +41,12 @@ body,
 #root {
   height: 100%;
 }
+
+/* Keep focus around the complete, symmetric writing surface rather than its inset textarea. */
+.composer-card:has(textarea:focus-visible) {
+  box-shadow: 0 0 0 2px #06070852, 0 4px 16px #00000014;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}

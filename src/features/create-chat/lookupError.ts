@@ -8,23 +8,23 @@ export class NoAccountError extends Error {
   }
 }
 
-const UNKNOWN = 'The number could not be checked. Try again.'
+const UNKNOWN = 'Не удалось проверить номер. Попробуйте ещё раз.'
 
 const BY_KIND: Partial<Record<GreenApiErrorKind, string>> = {
-  cancelled: 'The lookup was cancelled.',
-  unauthorized: 'The instance rejected these credentials. Change credentials and try again.',
-  suspended: 'This GREEN-API account is suspended. Check its status in the dashboard.',
-  instanceUnavailable: 'The instance is not ready. Authorize it in the dashboard, then try again.',
-  instanceStarting: 'The instance is restarting. Wait a few seconds and try again.',
-  quotaExceeded: 'The plan quota is exhausted. Upgrade the plan or continue an existing chat.',
-  rateLimited: 'Too many requests to this instance. Wait a few seconds and try again.',
+  cancelled: 'Проверка номера отменена.',
+  unauthorized: 'Инстанс отклонил данные входа. Измените их и попробуйте ещё раз.',
+  suspended: 'Аккаунт GREEN-API заблокирован. Проверьте его статус в личном кабинете.',
+  instanceUnavailable: 'Инстанс не готов. Авторизуйте его в личном кабинете и попробуйте ещё раз.',
+  instanceStarting: 'Инстанс перезапускается. Подождите несколько секунд и попробуйте ещё раз.',
+  quotaExceeded: 'Лимит тарифа исчерпан. Смените тариф или продолжите существующий чат.',
+  rateLimited: 'Слишком много запросов к инстансу. Подождите несколько секунд и попробуйте ещё раз.',
   lookupLimited:
-    'Number checks are restricted on this instance. Pause them for about two hours before checking another number.',
+    'Проверка номеров для этого инстанса ограничена. Подождите около двух часов перед проверкой следующего номера.',
 }
 
 /** Actionable, credential-free text for a failed lookup. */
 export function lookupErrorMessage(failure: unknown): string {
-  if (failure instanceof NoAccountError) return 'No MAX account is registered for this number.'
+  if (failure instanceof NoAccountError) return 'Для этого номера нет аккаунта MAX.'
   if (failure instanceof GreenApiError) return BY_KIND[failure.kind] ?? UNKNOWN
   return UNKNOWN
 }

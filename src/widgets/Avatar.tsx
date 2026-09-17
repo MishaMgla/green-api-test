@@ -1,7 +1,4 @@
-/**
- * Circular initials avatar. No photo is ever available in this assignment, so the
- * reference's five-colour fallback palette is picked deterministically from the chat ID.
- */
+import { useState } from 'react'
 
 /** Two-stop gradients + white initials, transcribed from the reference fallback set. */
 const PALETTE = [
@@ -29,15 +26,25 @@ export function initials(name: string): string {
   return letters.toUpperCase() || '?'
 }
 
-export function Avatar({ id, name, size }: { id: string; name: string; size: 'sm' | 'lg' }) {
+export function Avatar({ id, name, size, url }: { id: string; name: string; size: 'sm' | 'lg'; url?: string }) {
+  const [failedUrl, setFailedUrl] = useState<string>()
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-full bg-linear-to-b font-medium text-white ${
+      className={`relative flex shrink-0 overflow-hidden items-center justify-center rounded-full bg-linear-to-b font-medium text-white ${
         PALETTE[paletteIndex(id)]
-      } ${size === 'lg' ? 'size-16 text-xl' : 'size-10 text-sm'}`}
+      } ${size === 'lg' ? 'size-14 text-xl' : 'size-10 text-sm'}`}
     >
       {initials(name)}
+      {url && url !== failedUrl && (
+        <img
+          src={url}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setFailedUrl(url)}
+          className="absolute inset-0 size-full object-cover"
+        />
+      )}
     </span>
   )
 }

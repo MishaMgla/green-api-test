@@ -10,7 +10,6 @@ import type { Credentials } from '../../shared/api/greenApi'
 const CREDENTIALS: Credentials = {
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
-  apiUrl: 'https://1101.api.green-api.com',
 }
 
 const ALICE = '10000000'

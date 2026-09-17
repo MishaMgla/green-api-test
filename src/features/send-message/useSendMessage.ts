@@ -7,20 +7,20 @@ import { GreenApiError, sendMessage, type GreenApiErrorKind } from '../../shared
 /** Longest text accepted for one outgoing message. */
 export const MESSAGE_LIMIT = 4000
 
-const TOO_LONG = `A message can be at most ${MESSAGE_LIMIT} characters. Shorten it and send again.`
+const TOO_LONG = `В сообщении может быть не больше ${MESSAGE_LIMIT} символов. Сократите его и отправьте ещё раз.`
 /** Said whenever the outcome is unknown: the message may still have reached the recipient. */
 const UNCERTAIN =
-  'The instance did not answer, so this message may or may not have been sent. Check the chat in MAX before sending it again.'
+  'Инстанс не ответил, поэтому неизвестно, отправлено ли сообщение. Проверьте чат в MAX перед повторной отправкой.'
 
 // Sending needs its own wording rather than the lookup table: the same failure kind
 // asks for a different action here, and `transport` means uncertain delivery, not failure.
 const BY_KIND: Partial<Record<GreenApiErrorKind, string>> = {
-  unauthorized: 'The instance rejected these credentials. Change credentials and send again.',
-  suspended: 'This GREEN-API account is suspended. Check its status in the dashboard.',
-  instanceUnavailable: 'The instance is not ready. Authorize it in the dashboard, then send again.',
-  instanceStarting: 'The instance is restarting. Wait a few seconds and send again.',
-  quotaExceeded: 'The plan quota is exhausted. Upgrade the plan to keep sending.',
-  rateLimited: 'Too many requests to this instance. Wait a few seconds and send again.',
+  unauthorized: 'Инстанс отклонил данные входа. Измените их и отправьте сообщение ещё раз.',
+  suspended: 'Аккаунт GREEN-API заблокирован. Проверьте его статус в личном кабинете.',
+  instanceUnavailable: 'Инстанс не готов. Авторизуйте его в личном кабинете и отправьте сообщение ещё раз.',
+  instanceStarting: 'Инстанс перезапускается. Подождите несколько секунд и отправьте сообщение ещё раз.',
+  quotaExceeded: 'Лимит тарифа исчерпан. Смените тариф, чтобы продолжить отправку.',
+  rateLimited: 'Слишком много запросов к инстансу. Подождите несколько секунд и отправьте сообщение ещё раз.',
 }
 
 /** Actionable, credential-free text for a failed send. */

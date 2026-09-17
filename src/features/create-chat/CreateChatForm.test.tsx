@@ -8,7 +8,6 @@ import type { Credentials } from '../../shared/api/greenApi'
 const CREDENTIALS: Credentials = {
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
-  apiUrl: 'https://1101.api.green-api.com',
 }
 
 type Pending = { resolve: (body: unknown) => void; fail: (status: number, body: string) => void }
@@ -33,7 +32,7 @@ function stubFetch() {
 function ChatList() {
   const chats = useChats()
   return (
-    <ul aria-label="Chats">
+    <ul aria-label="Чаты">
       {chats.map((chat) => (
         <li key={chat.id}>{`${chat.id}:${chat.messages.length}`}</li>
       ))}
@@ -55,9 +54,9 @@ function renderForm(session: Session) {
 }
 
 async function submit(phone: string) {
-  fireEvent.change(screen.getByLabelText('Phone number'), { target: { value: phone } })
+  fireEvent.change(screen.getByLabelText('Номер телефона'), { target: { value: phone } })
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Create chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Создать чат' }))
   })
 }
 
@@ -70,9 +69,9 @@ test('rejects an unsupported number without calling the provider', async () => {
   renderForm(createSession(CREDENTIALS))
   await submit('+1 415 555 0100')
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Russian')
+  expect(screen.getByRole('alert')).toHaveTextContent('российский')
   expect(fetchMock).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('Phone number')).toHaveValue('+1 415 555 0100')
+  expect(screen.getByLabelText('Номер телефона')).toHaveValue('+1 415 555 0100')
 })
 
 test('repeated numbers and alternate formatting select one chat and one lookup', async () => {
@@ -80,7 +79,7 @@ test('repeated numbers and alternate formatting select one chat and one lookup',
   const selected = renderForm(createSession(CREDENTIALS))
 
   await submit('+7 (999) 123-45-67')
-  expect(screen.getByRole('button', { name: 'Checking…' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Проверяем…' })).toBeDisabled()
   await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
 
   await submit('79991234567')
@@ -117,13 +116,13 @@ test('a cancelled lookup cannot add a chat to another session', async () => {
   const replacement = createSession(CREDENTIALS)
   await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
 
-  expect(screen.getByRole('list', { name: 'Chats' })).toBeEmptyDOMElement()
+  expect(screen.getByRole('list', { name: 'Чаты' })).toBeEmptyDOMElement()
   expect(replacement.queryClient.getQueryData(['chats'])).toEqual([])
 })
 
 test.each([
-  [{ exist: false, chatId: '' }, 'No MAX account is registered for this number.'],
-  [{ exist: 'yes' }, 'The number could not be checked. Try again.'],
+  [{ exist: false, chatId: '' }, 'Для этого номера нет аккаунта MAX.'],
+  [{ exist: 'yes' }, 'Не удалось проверить номер. Попробуйте ещё раз.'],
 ])('does not create a chat from response %j', async (body, message) => {
   const { pending } = stubFetch()
   renderForm(createSession(CREDENTIALS))
@@ -132,8 +131,8 @@ test.each([
   await act(async () => pending[0].resolve(body))
 
   expect(screen.getByRole('alert')).toHaveTextContent(message)
-  expect(screen.getByRole('list', { name: 'Chats' })).toBeEmptyDOMElement()
-  expect(screen.getByLabelText('Phone number')).toHaveValue('79991234567')
+  expect(screen.getByRole('list', { name: 'Чаты' })).toBeEmptyDOMElement()
+  expect(screen.getByLabelText('Номер телефона')).toHaveValue('79991234567')
 })
 
 test('a contact-lookup restriction advises pausing checks, not retrying soon', async () => {
@@ -143,7 +142,7 @@ test('a contact-lookup restriction advises pausing checks, not retrying soon', a
   await submit('79991234567')
   await act(async () => pending[0].fail(469, 'User get contact info limit reached'))
 
-  expect(screen.getByRole('alert')).toHaveTextContent('two hours')
+  expect(screen.getByRole('alert')).toHaveTextContent('двух часов')
 })
 
 test('a rate limit advises waiting a few seconds', async () => {
@@ -153,5 +152,5 @@ test('a rate limit advises waiting a few seconds', async () => {
   await submit('79991234567')
   await act(async () => pending[0].fail(429, ''))
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Wait a few seconds')
+  expect(screen.getByRole('alert')).toHaveTextContent('Подождите несколько секунд')
 })

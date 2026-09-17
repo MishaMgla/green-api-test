@@ -20,9 +20,10 @@ validation, and genuinely reusable UI. Imports point down the layers.
 
 ## Session and cache
 
-Keep credentials in memory and take apiUrl from the user's GREEN-API dashboard.
-Require an HTTPS origin without userinfo, path, query, or fragment. Validate the
-instance ID and nonempty token, encode path segments, and mask the token input.
+Keep credentials in memory. The user requested a fixed API origin,
+`https://3100.api.green-api.com`; the login accepts only instance ID and token.
+Validate the instance ID and nonempty token, encode path segments, and mask the
+token input.
 Never persist credentials, place them in query keys, or log request URLs/raw
 errors. Do not load scripts or tracking from the saved reference pages.
 
@@ -56,8 +57,22 @@ provider's examples show, so it cannot be derived from the number. This follows
 
 Send and receive share one idempotent message insertion function, keyed by chat
 ID and message ID. Deduplicate against existing messages; a second global
-`seenIdMessages` store is unnecessary for this in-memory assignment. Preserve
-arrival order and use the server timestamp when available.
+`seenIdMessages` store is unnecessary for this in-memory assignment. Keep messages in chronological order
+when merging history, and use the server timestamp when available.
+
+## Chat history and contact details
+
+The user requested history, names, avatars, and Russian UI after the original
+assignment was completed. Opening a chat fetches its available text history using
+[GetChatHistory](https://green-api.com/v3/docs/api/journals/GetChatHistory/) and its
+name/photo using [GetContactInfo](https://green-api.com/v3/docs/api/service/GetContactInfo/).
+These requests are independent: a failed profile lookup must not block messages.
+
+History joins the same session cache as send and receive, deduplicated by chat
+and message ID and ordered by timestamp. The provider exposes a count rather
+than an offset; requesting older history increases that count. Provider retention
+still bounds the available history. Contact photos fall back to initials when
+absent or inaccessible. No persistent storage or automatic chat-list sync is added.
 
 ## Send and receive
 

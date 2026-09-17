@@ -2,7 +2,6 @@ import { asRecord } from '../lib/record'
 
 /** Runtime credentials from the user's GREEN-API dashboard; never persisted. */
 export type Credentials = {
-  apiUrl: string
   idInstance: string
   apiTokenInstance: string
 }
@@ -12,6 +11,8 @@ export type GreenApiOperation =
   | 'sendMessage'
   | 'receiveNotification'
   | 'deleteNotification'
+  | 'getChatHistory'
+  | 'getContactInfo'
 
 export type GreenApiErrorKind =
   /** The caller's signal aborted the request. */
@@ -48,6 +49,8 @@ export class GreenApiError extends Error {
   }
 }
 
+const API_URL = 'https://3100.api.green-api.com'
+
 const REQUEST_DEADLINE_MS = 15_000
 const RECEIVE_TIMEOUT_SECONDS = 20
 /** Longer than the server long poll, so the server closes the wait first. */
@@ -56,13 +59,12 @@ const RECEIVE_DEADLINE_MS = 30_000
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 function methodUrl(
-  { apiUrl, idInstance, apiTokenInstance }: Credentials,
+  { idInstance, apiTokenInstance }: Credentials,
   method: string,
   suffix = '',
 ): string {
-  const base = apiUrl.replace(/\/+$/, '')
   const instance = `waInstance${encodeURIComponent(idInstance)}`
-  return `${base}/${instance}/${method}/${encodeURIComponent(apiTokenInstance)}${suffix}`
+  return `${API_URL}/${instance}/${method}/${encodeURIComponent(apiTokenInstance)}${suffix}`
 }
 
 function statusKind(status: number, body: string): GreenApiErrorKind {
@@ -179,6 +181,52 @@ export async function sendMessage(
 }
 
 export type ReceivedNotification = { receiptId: number; body: unknown }
+
+/** MAX returns newest first; only count-based expansion is supported. */
+export async function getChatHistory(
+  credentials: Credentials,
+  chatId: string,
+  count: number,
+  signal: AbortSignal,
+): Promise<unknown[]> {
+  const data = await request(
+    'getChatHistory',
+    methodUrl(credentials, 'getChatHistory'),
+    { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ chatId, count }) },
+    REQUEST_DEADLINE_MS,
+    signal,
+  )
+  if (!Array.isArray(data)) throw new GreenApiError('getChatHistory', 'transport')
+  return data
+}
+
+export type ContactInfo = { name: string; avatarUrl: string }
+
+/** One contact lookup supplies both the address-book/profile name and avatar. */
+export async function getContactInfo(
+  credentials: Credentials,
+  chatId: string,
+  signal: AbortSignal,
+): Promise<ContactInfo> {
+  const data = asRecord(await request(
+    'getContactInfo',
+    methodUrl(credentials, 'getContactInfo'),
+    { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ chatId }) },
+    REQUEST_DEADLINE_MS,
+    signal,
+  ))
+  if (!data || data.chatId !== chatId || data.chatType !== 'user' ||
+      typeof data.name !== 'string' || typeof data.contactName !== 'string' || typeof data.avatar !== 'string') {
+    throw new GreenApiError('getContactInfo', 'transport')
+  }
+  // Remote image URLs must remain HTTPS and must not carry embedded credentials.
+  let avatarUrl = ''
+  try {
+    const url = new URL(data.avatar)
+    if (url.protocol === 'https:' && !url.username && !url.password) avatarUrl = url.href
+  } catch { /* An absent or malformed avatar uses the initials fallback. */ }
+  return { name: data.contactName.trim() || data.name.trim(), avatarUrl }
+}
 
 /** Long-polls one notification; resolves to null while the queue stays empty. */
 export async function receiveNotification(

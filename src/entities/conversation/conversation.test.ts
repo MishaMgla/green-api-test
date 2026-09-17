@@ -1,5 +1,5 @@
 import { normalizePhone } from '../../shared/lib/phone'
-import { insertMessage, mapNotification } from './conversation'
+import { insertMessage, mapNotification, mergeHistory } from './conversation'
 import type { Chat, MappedNotification, Message } from './conversation'
 
 function incoming(
@@ -130,4 +130,34 @@ test('adopts the server timestamp of an echo in either arrival order', () => {
   expect(insertMessage(postFirst, '10000000', echo)).toBe(postFirst)
   expect(insertMessage(echoFirst, '10000000', echo)).toBe(echoFirst)
   expect(insertMessage(echoFirst, '10000000', posted)).toBe(echoFirst)
+})
+
+test('merges newest-first history with live messages, server echoes and names without duplicates', () => {
+  const posted: Message = { id: 'sent', text: 'sent', outgoing: true, timestamp: 5000 }
+  const current = insertMessage(insertMessage([], '10000000', posted), '10000000', {
+    id: 'live', text: 'live', outgoing: false, timestamp: 6000, fromServer: true,
+  })
+  const history = [
+    { chatId: '10000000', type: 'outgoing', typeMessage: 'textMessage', idMessage: 'sent', textMessage: 'sent', timestamp: 2 },
+    { chatId: '10000000', type: 'incoming', typeMessage: 'extendedTextMessage', idMessage: 'old', extendedTextMessage: { text: 'old URL' }, timestamp: 1, senderContactName: 'Saved name' },
+    { chatId: 'another', type: 'incoming', typeMessage: 'textMessage', idMessage: 'wrong', textMessage: 'wrong', timestamp: 1 },
+    { chatId: '10000000', type: 'incoming', typeMessage: 'imageMessage', idMessage: 'image', timestamp: 1 },
+    null,
+  ]
+  const merged = mergeHistory(current, '10000000', history)
+  expect(merged[0].name).toBe('Saved name')
+  expect(merged[0].messages.map(({ id, timestamp }) => [id, timestamp])).toEqual([
+    ['old', 1000], ['sent', 2000], ['live', 6000],
+  ])
+  expect(mergeHistory(merged, '10000000', history)[0].messages).toBe(merged[0].messages)
+  expect(current[0].messages).toHaveLength(2)
+})
+
+test('outgoing sender metadata never renames the recipient to our own profile', () => {
+  const mapped = mapNotification(incoming(text, { chatName: '', senderName: 'Me', senderContactName: 'Myself' }, { typeWebhook: 'outgoingAPIMessageReceived' }))
+  expect(mapped.type).toBe('message')
+  if (mapped.type !== 'message') throw new Error('expected a message')
+  expect(mapped.chatName).toBe('10000000')
+  const chats: Chat[] = [{ id: '10000000', name: 'Recipient', messages: [] }]
+  expect(insertMessage(chats, mapped.chatId, mapped.message, mapped.chatName)[0].name).toBe('Recipient')
 })

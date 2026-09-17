@@ -1,13 +1,12 @@
 import { validateCredentials } from './credentials'
 
 const VALID = {
-  apiUrl: 'https://api.green-api.com',
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
 }
 
 describe('validateCredentials', () => {
-  it('accepts a dashboard origin with a numeric instance ID', () => {
+  it('accepts a numeric instance ID and a token', () => {
     expect(validateCredentials(VALID)).toEqual({})
   })
 
@@ -28,13 +27,4 @@ describe('validateCredentials', () => {
     )
   })
 
-  it.each([
-    'http://api.green-api.com',
-    'https://api.green-api.com/waInstance1101000001',
-    'https://user:pass@api.green-api.com',
-    'https://api.green-api.com?token=x',
-    'not a url',
-  ])('rejects the API URL %j', (apiUrl) => {
-    expect(validateCredentials({ ...VALID, apiUrl })).toHaveProperty('apiUrl')
-  })
 })

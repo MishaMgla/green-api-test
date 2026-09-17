@@ -1,12 +1,11 @@
-import { GreenApiError, checkAccount, deleteNotification, receiveNotification, sendMessage } from './greenApi'
+import { GreenApiError, checkAccount, deleteNotification, getChatHistory, getContactInfo, receiveNotification, sendMessage } from './greenApi'
 import type { Credentials, GreenApiErrorKind } from './greenApi'
 
 const credentials: Credentials = {
-  apiUrl: 'https://1101.api.green-api.com',
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
 }
-const base = 'https://1101.api.green-api.com/waInstance1101000001'
+const base = 'https://3100.api.green-api.com/waInstance1101000001'
 const token = '%3CapiTokenInstance%3E'
 
 const fetchMock = vi.fn()
@@ -26,7 +25,7 @@ async function kindOf(call: Promise<unknown>): Promise<GreenApiErrorKind> {
     if (!(error instanceof GreenApiError)) throw error
     // No credential or provider detail may leak into what we may display.
     expect(error.message).not.toContain(credentials.apiTokenInstance)
-    expect(error.message).not.toContain(credentials.apiUrl)
+    expect(error.message).not.toContain('https://3100.api.green-api.com')
     return error.kind
   }
   throw new Error('expected a GreenApiError')
@@ -41,7 +40,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('builds each request from encoded runtime credentials', async () => {
+test('builds each request on the fixed API origin with encoded runtime credentials', async () => {
   const signal = new AbortController().signal
 
   respondWith('{"exist":true,"chatId":"10000000","fromCache":false}')
@@ -85,6 +84,25 @@ test('builds each request from encoded runtime credentials', async () => {
     `${base}/deleteNotification/${token}/1234567`,
     expect.objectContaining({ method: 'DELETE' }),
   )
+})
+
+test('requests MAX history by count and gets the name and avatar in one contact lookup', async () => {
+  const signal = new AbortController().signal
+  respondWith('[]')
+  await expect(getChatHistory(credentials, '10000000', 200, signal)).resolves.toEqual([])
+  expect(fetchMock).toHaveBeenLastCalledWith(`${base}/getChatHistory/${token}`, expect.objectContaining({
+    method: 'POST', body: '{"chatId":"10000000","count":200}',
+  }))
+  respondWith(JSON.stringify({ chatId: '10000000', chatType: 'user', name: 'Profile', contactName: 'Saved name', avatar: 'https://i.oneme.ru/photo' }))
+  await expect(getContactInfo(credentials, '10000000', signal)).resolves.toEqual({ name: 'Saved name', avatarUrl: 'https://i.oneme.ru/photo' })
+  expect(fetchMock).toHaveBeenLastCalledWith(`${base}/getContactInfo/${token}`, expect.objectContaining({
+    method: 'POST', body: '{"chatId":"10000000"}',
+  }))
+  respondWith('{}')
+  await expect(kindOf(getChatHistory(credentials, '10000000', 100, signal))).resolves.toBe('transport')
+  await expect(kindOf(getContactInfo(credentials, '10000000', signal))).resolves.toBe('transport')
+  respondWith(JSON.stringify({ chatId: '10000000', chatType: 'user', name: 'Profile', contactName: '', avatar: 'javascript:alert(1)' }))
+  await expect(getContactInfo(credentials, '10000000', signal)).resolves.toEqual({ name: 'Profile', avatarUrl: '' })
 })
 
 test.each([

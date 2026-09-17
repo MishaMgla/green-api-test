@@ -7,7 +7,7 @@ import { useSession } from '../../entities/session/session'
 import { lookupErrorMessage, NoAccountError } from './lookupError'
 
 const INVALID_PHONE =
-  'Enter a Russian (7XXXXXXXXXX) or Belarusian (375XXXXXXXXX) number.'
+  'Введите российский (7XXXXXXXXXX) или белорусский (375XXXXXXXXX) номер.'
 
 /** Adds the chat unless the session already has it; reception may have created it. */
 function withChat(chats: Chat[], chatId: string): Chat[] {
@@ -57,7 +57,7 @@ export function CreateChatForm({ onSelect }: { onSelect: (chatId: string) => voi
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-2">
       <label htmlFor="new-chat-phone" className="sr-only">
-        Phone number
+        Номер телефона
       </label>
       <input
         id="new-chat-phone"
@@ -76,7 +76,7 @@ export function CreateChatForm({ onSelect }: { onSelect: (chatId: string) => voi
         disabled={lookup.isPending}
         className="bg-accent enabled:hover:bg-accent-hover enabled:active:bg-accent-pressed focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 font-medium text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        {lookup.isPending ? 'Checking…' : 'Create chat'}
+        {lookup.isPending ? 'Проверяем…' : 'Создать чат'}
       </button>
       {error && (
         <p id="new-chat-error" role="alert" className="text-ink text-[13px]/4">

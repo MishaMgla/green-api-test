@@ -7,7 +7,6 @@ import type { Chat } from '../entities/conversation/conversation'
 const CREDENTIALS: Credentials = {
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
-  apiUrl: 'https://1101.api.green-api.com',
 }
 
 type Pending = { signal: AbortSignal | null | undefined; resolve: (body: unknown) => void }
@@ -46,24 +45,30 @@ function stubFetch(honourAbort = true) {
         }
       }),
   )
-  vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
-    input.includes('/receiveNotification') ? receiveMock() : fetchMock(input, init),
-  )
+  vi.stubGlobal('fetch', (input: string, init?: RequestInit) => {
+    if (/\/(getChatHistory|getContactInfo)\//.test(input)) {
+      const chatId = JSON.parse(String(init?.body)).chatId
+      const body = input.includes('/getChatHistory/')
+        ? []
+        : { chatId, chatType: 'user', name: '', contactName: '', avatar: '' }
+      return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(body) })
+    }
+    return input.includes('/receiveNotification') ? receiveMock() : fetchMock(input, init)
+  })
   return { fetchMock, receiveMock, pending, polls }
 }
 
 function login(overrides: Partial<Credentials> = {}) {
   const fields = { ...CREDENTIALS, ...overrides }
-  fireEvent.change(screen.getByLabelText('Instance ID'), { target: { value: fields.idInstance } })
-  fireEvent.change(screen.getByLabelText('API token'), { target: { value: fields.apiTokenInstance } })
-  fireEvent.change(screen.getByLabelText('API URL'), { target: { value: fields.apiUrl } })
-  fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
+  fireEvent.change(screen.getByLabelText('ID инстанса'), { target: { value: fields.idInstance } })
+  fireEvent.change(screen.getByLabelText('Токен API'), { target: { value: fields.apiTokenInstance } })
+  fireEvent.click(screen.getByRole('button', { name: 'Войти' }))
 }
 
 async function createChat(phone: string) {
-  fireEvent.change(screen.getByLabelText('Phone number'), { target: { value: phone } })
+  fireEvent.change(screen.getByLabelText('Номер телефона'), { target: { value: phone } })
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Create chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Создать чат' }))
   })
 }
 
@@ -75,14 +80,11 @@ afterEach(() => {
 
 test('mounts the login form', () => {
   render(<App />)
-  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Войти' })).toBeVisible()
+  expect(screen.queryByLabelText('Адрес API')).not.toBeInTheDocument()
 })
 
 test.each([
-  ['a non-HTTPS origin', { apiUrl: 'http://1101.api.green-api.com' }],
-  ['an origin with a path', { apiUrl: 'https://1101.api.green-api.com/waInstance' }],
-  ['an origin with userinfo', { apiUrl: 'https://user:pass@1101.api.green-api.com' }],
-  ['an origin with a query', { apiUrl: 'https://1101.api.green-api.com/?a=1' }],
   ['a malformed instance ID', { idInstance: '1101-000001' }],
   ['an empty token', { apiTokenInstance: '   ' }],
 ])('%s cannot start a session', (_name, overrides) => {
@@ -90,8 +92,8 @@ test.each([
   render(<App />)
   login(overrides)
 
-  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible()
-  expect(screen.queryByRole('button', { name: 'Change credentials' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Войти' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Сменить данные' })).toBeNull()
   expect(screen.getByRole('alert')).toBeVisible()
   // No eager queue probe either: logging in must not call the provider at all.
   expect(fetchMock).not.toHaveBeenCalled()
@@ -102,7 +104,7 @@ test('a valid login starts a session and only the receive loop', () => {
   render(<App />)
   login()
 
-  expect(screen.getByRole('button', { name: 'Change credentials' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Сменить данные' })).toBeVisible()
   // No eager queue probe: the session's only request is its one receive owner.
   expect(fetchMock).not.toHaveBeenCalled()
   expect(receiveMock).toHaveBeenCalledTimes(1)
@@ -151,10 +153,10 @@ test('ending a session aborts its registered work and returns to the login form'
   await createChat('79991234567')
   expect(pending[0].signal?.aborted).toBe(false)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Change credentials' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Сменить данные' }))
 
   expect(pending[0].signal?.aborted).toBe(true)
-  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Войти' })).toBeVisible()
 })
 
 test('a late lookup result cannot reach a replacement session', async () => {
@@ -164,11 +166,11 @@ test('a late lookup result cannot reach a replacement session', async () => {
   login()
   await createChat('79991234567')
 
-  fireEvent.click(screen.getByRole('button', { name: 'Change credentials' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Сменить данные' }))
   login({ idInstance: '1101000002' })
   await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
 
-  expect(screen.getByRole('list', { name: 'Chats' })).toBeEmptyDOMElement()
+  expect(screen.getByRole('list', { name: 'Чаты' })).toBeEmptyDOMElement()
 })
 
 test('login → create → send → receive → change credentials recovers without a reload', async () => {
@@ -181,19 +183,19 @@ test('login → create → send → receive → change credentials recovers with
   // Create: the lookup resolves the number to its canonical chat ID and selects it.
   await createChat('79991234567')
   await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
-  const composer = screen.getByLabelText('Message')
+  const composer = screen.getByLabelText('Сообщение')
   const form = composer.closest('form')
   expect(composer).toBeEnabled()
 
   // Send: the draft stays readable and the composer reports itself busy meanwhile.
   fireEvent.change(composer, { target: { value: 'hello there' } })
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить сообщение' }))
   })
   expect(form).toHaveAttribute('aria-busy', 'true')
   expect(composer).toHaveValue('hello there')
   await act(async () => pending[1].resolve({ idMessage: 'out-1' }))
-  const log = screen.getByRole('log', { name: 'Messages' })
+  const log = screen.getByRole('log', { name: 'Сообщения' })
   expect(await within(log).findByText('hello there')).toBeVisible()
   expect(form).toHaveAttribute('aria-busy', 'false')
 
@@ -204,14 +206,14 @@ test('login → create → send → receive → change credentials recovers with
   await waitFor(() => expect(polls).toHaveLength(1))
   await act(async () => polls[0].fail(401))
   const paused = await screen.findByRole('alert')
-  expect(paused).toHaveTextContent(/credentials/i)
+  expect(paused).toHaveTextContent(/данные входа/i)
   expect(within(log).getByText('hello there')).toBeVisible()
   expect(composer).toHaveValue('still typing')
   expect(document.body.innerHTML).not.toContain(token)
   expect(document.body.innerHTML).not.toContain(CREDENTIALS.idInstance)
 
   // Retry resumes the same owner in place: no reload, and the next message arrives.
-  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+  fireEvent.click(within(paused).getByRole('button', { name: 'Повторить' }))
   await waitFor(() => expect(polls).toHaveLength(2))
   await act(async () =>
     polls[1].resolve({
@@ -231,7 +233,7 @@ test('login → create → send → receive → change credentials recovers with
   expect(composer).toHaveValue('still typing')
 
   // Changing credentials ends the session locally and leaves nothing of it behind.
-  fireEvent.click(screen.getByRole('button', { name: 'Change credentials' }))
-  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Сменить данные' }))
+  expect(screen.getByRole('button', { name: 'Войти' })).toBeVisible()
   expect(document.body.innerHTML).not.toContain(token)
 })

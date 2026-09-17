@@ -10,7 +10,6 @@ import { MESSAGE_LIMIT, useSendMessage } from './useSendMessage'
 const CREDENTIALS: Credentials = {
   idInstance: '1101000001',
   apiTokenInstance: '<apiTokenInstance>',
-  apiUrl: 'https://1101.api.green-api.com',
 }
 
 const ALICE = '10000000'
@@ -43,11 +42,18 @@ function stubFetch() {
   // The chat page owns the receive loop, whose long poll is not what this file
   // drives: it is answered by a promise that only ever aborts, and kept out of both
   // the queue and the send counter.
-  vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
-    input.includes('/receiveNotification')
+  vi.stubGlobal('fetch', (input: string, init?: RequestInit) => {
+    if (/\/(getChatHistory|getContactInfo)\//.test(input)) {
+      const chatId = JSON.parse(String(init?.body)).chatId
+      const body = input.includes('/getChatHistory/')
+        ? []
+        : { chatId, chatType: 'user', name: '', contactName: '', avatar: '' }
+      return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify(body) })
+    }
+    return input.includes('/receiveNotification')
       ? new Promise((_resolve, reject) => rejectOnAbort(init?.signal, reject))
-      : fetchMock(input, init),
-  )
+      : fetchMock(input, init)
+  })
   return { fetchMock, pending }
 }
 
@@ -110,16 +116,17 @@ function echo(session: Session, chatId: string, idMessage: string, text: string)
   )
 }
 
-const composer = () => screen.getByLabelText('Message')
+const composer = () => screen.getByLabelText('Сообщение')
 const open = (name: string) =>
   fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }))
 const type = (text: string) => fireEvent.change(composer(), { target: { value: text } })
-const sendButton = () => screen.getByRole('button', { name: 'Send message' })
+const sendButton = () => screen.getByRole('button', { name: 'Отправить сообщение' })
 const clickSend = () => fireEvent.click(sendButton())
 /** The mutation issues its request off the click, so tests wait for the requests themselves. */
 const requested = (pending: Pending[], count: number) =>
   waitFor(() => expect(pending).toHaveLength(count))
 const bubbles = () => within(screen.getByRole('log')).queryAllByRole('listitem')
+  .filter((item) => item.querySelector('p')) // Calendar separators are not messages.
 const bubbleTexts = () => bubbles().map((item) => item.querySelector('p')?.textContent)
 /** The draft is cleared last in `onSuccess`, so its emptiness means the chat cache is final. */
 const sendAccepted = () => waitFor(() => expect(composer()).toHaveValue(''))
@@ -182,7 +189,7 @@ test('the guard is released by a success and by a failure, and never latched by 
   await act(async () => result.current.send(ALICE, 'two'))
   expect(fetchMock).toHaveBeenCalledTimes(2)
   pending[1].fail(500, '')
-  await waitFor(() => expect(result.current.error?.message).toMatch(/may or may not/))
+  await waitFor(() => expect(result.current.error?.message).toMatch(/неизвестно, отправлено ли сообщение/))
 
   await act(async () => result.current.send(ALICE, 'three'))
   expect(fetchMock).toHaveBeenCalledTimes(3)
@@ -198,7 +205,7 @@ test('a failed send keeps the draft and calls delivery uncertain', async () => {
   await requested(pending, 1)
   pending[0].fail(500, '')
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('may or may not have been sent')
+  expect(await screen.findByRole('alert')).toHaveTextContent('неизвестно, отправлено ли сообщение')
   expect(composer()).toHaveValue('hello')
   expect(bubbles()).toHaveLength(0)
 })
@@ -221,7 +228,7 @@ test('a failure that arrives after a chat switch stays with the chat it was sent
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
   open('Alice')
-  expect(screen.getByRole('alert')).toHaveTextContent('may or may not have been sent')
+  expect(screen.getByRole('alert')).toHaveTextContent('неизвестно, отправлено ли сообщение')
 })
 
 test('a successful send clears the error left by the previous attempt', async () => {
@@ -270,7 +277,7 @@ test('a draft over the character limit is rejected before any request', async ()
   type(long)
   clickSend()
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(`at most ${MESSAGE_LIMIT} characters`)
+  expect(await screen.findByRole('alert')).toHaveTextContent(`не больше ${MESSAGE_LIMIT} символов`)
   expect(fetchMock).not.toHaveBeenCalled()
   expect(composer()).toHaveValue(long)
 
