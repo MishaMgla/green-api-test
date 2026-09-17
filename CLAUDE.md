@@ -22,7 +22,6 @@
 | [docs/conventions/documentation.md](docs/conventions/documentation.md) | Пишешь или правишь документацию |
 | [docs/conventions/code-style.md](docs/conventions/code-style.md) | Пишешь код |
 | [docs/conventions/git.md](docs/conventions/git.md) | Коммитишь, ветвишься, открываешь PR |
-| [docs/green-api.md](docs/green-api.md) | Работаешь с внешним API GREEN-API |
 | `docs/architecture.md` | Появится вместе с ТЗ |
 
 `AGENTS.md` — симлинк на этот файл, чтобы Codex и Claude читали одно и то же.

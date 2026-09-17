@@ -28,7 +28,6 @@ CLAUDE.md              оглавление + правила «всегда»
 AGENTS.md -> CLAUDE.md симлинк для Codex
 docs/
   conventions/         как мы работаем (стиль, git, документация)
-  green-api.md         контракт внешнего API
   architecture.md      решения по проекту (появится с ТЗ)
 ```
 
