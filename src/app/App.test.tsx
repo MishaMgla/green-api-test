@@ -15,6 +15,10 @@ type Pending = { signal: AbortSignal | null | undefined; resolve: (body: unknown
 /** Replaces fetch with a hand-controlled queue; no request ever leaves the test. */
 function stubFetch(honourAbort = true) {
   const pending: Pending[] = []
+  // The chat page owns the receive loop, whose long poll is not what these tests
+  // drive. It is answered by a promise that never settles and counted separately,
+  // so the hand-controlled queue keeps holding only the requests under test.
+  const receiveMock = vi.fn(() => new Promise(() => {}))
   const fetchMock = vi.fn(
     (_input: string, init?: RequestInit) =>
       new Promise((resolve, reject) => {
@@ -30,8 +34,10 @@ function stubFetch(honourAbort = true) {
         }
       }),
   )
-  vi.stubGlobal('fetch', fetchMock)
-  return { fetchMock, pending }
+  vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
+    input.includes('/receiveNotification') ? receiveMock() : fetchMock(input, init),
+  )
+  return { fetchMock, receiveMock, pending }
 }
 
 function login(overrides: Partial<Credentials> = {}) {
@@ -79,13 +85,15 @@ test.each([
   expect(fetchMock).not.toHaveBeenCalled()
 })
 
-test('a valid login starts a session without calling the provider', () => {
-  const { fetchMock } = stubFetch()
+test('a valid login starts a session and only the receive loop', () => {
+  const { fetchMock, receiveMock } = stubFetch()
   render(<App />)
   login()
 
   expect(screen.getByRole('button', { name: 'Change credentials' })).toBeVisible()
+  // No eager queue probe: the session's only request is its one receive owner.
   expect(fetchMock).not.toHaveBeenCalled()
+  expect(receiveMock).toHaveBeenCalledTimes(1)
 })
 
 test('credentials never enter storage', async () => {

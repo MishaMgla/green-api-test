@@ -3,6 +3,7 @@ import { useChats } from '../../entities/session/session'
 import { useSendMessage } from '../../features/send-message/useSendMessage'
 import { Sidebar } from '../../widgets/Sidebar'
 import { ChatHeader, Composer, Conversation } from '../../widgets/ChatWindow'
+import { useReceiveLoop } from './useReceiveLoop'
 
 /**
  * Composes the workspace and owns the local view state: which chat is selected and
@@ -10,6 +11,8 @@ import { ChatHeader, Composer, Conversation } from '../../widgets/ChatWindow'
  */
 export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => void }) {
   const chats = useChats()
+  // The session's one receive owner: polling runs here, independent of selection.
+  useReceiveLoop()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const selected = chats.find((chat) => chat.id === selectedId) ?? null

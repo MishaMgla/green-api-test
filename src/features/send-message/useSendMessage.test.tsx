@@ -21,7 +21,7 @@ type Pending = { resolve: (body: unknown) => void; fail: (status: number, body: 
 function stubFetch() {
   const pending: Pending[] = []
   const fetchMock = vi.fn(
-    () =>
+    (_input?: string, _init?: RequestInit) =>
       new Promise((resolve) => {
         pending.push({
           resolve: (body) =>
@@ -30,7 +30,12 @@ function stubFetch() {
         })
       }),
   )
-  vi.stubGlobal('fetch', fetchMock)
+  // The chat page owns the receive loop, whose long poll is not what this file
+  // drives: it is answered by a promise that never settles and kept out of both
+  // the queue and the send counter.
+  vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
+    input.includes('/receiveNotification') ? new Promise(() => {}) : fetchMock(input, init),
+  )
   return { fetchMock, pending }
 }
 
