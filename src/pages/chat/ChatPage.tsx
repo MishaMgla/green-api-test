@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useChats } from '../../entities/session/session'
+import { useSendMessage } from '../../features/send-message/useSendMessage'
 import { Sidebar } from '../../widgets/Sidebar'
 import { ChatHeader, Composer, Conversation } from '../../widgets/ChatWindow'
 
@@ -12,6 +13,12 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const selected = chats.find((chat) => chat.id === selectedId) ?? null
+  // Clears the submitted chat's draft, and only while it still holds the sent text.
+  const { send, sending, error } = useSendMessage((chatId, submitted) =>
+    setDrafts((current) =>
+      current[chatId] === submitted ? { ...current, [chatId]: '' } : current,
+    ),
+  )
 
   return (
     <div className="bg-app text-ink font-sans flex h-full">
@@ -41,12 +48,11 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
           onDraftChange={(text) =>
             selected && setDrafts((current) => ({ ...current, [selected.id]: text }))
           }
-          // ponytail: T07 replaces this with the send mutation and supplies `sending`
-          // and `error`. It clears the sent chat's draft on success — only when that
-          // draft still equals the submitted text — with the same setDrafts update.
-          onSend={() => {}}
-          sending={false}
-          error={null}
+          // The chat ID travels with the text, so the result lands where it was sent
+          // even if another chat is selected before the response arrives.
+          onSend={() => selected && send(selected.id, drafts[selected.id] ?? '')}
+          sending={sending}
+          error={error}
           disabled={selected === null}
         />
       </main>
