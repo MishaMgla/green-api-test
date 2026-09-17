@@ -71,7 +71,7 @@ test.each([
   ['an origin with a path', { apiUrl: 'https://1101.api.green-api.com/waInstance' }],
   ['an origin with userinfo', { apiUrl: 'https://user:pass@1101.api.green-api.com' }],
   ['an origin with a query', { apiUrl: 'https://1101.api.green-api.com/?a=1' }],
-  ['a malformed instance ID', { idInstance: '110100' }],
+  ['a malformed instance ID', { idInstance: '1101-000001' }],
   ['an empty token', { apiTokenInstance: '   ' }],
 ])('%s cannot start a session', (_name, overrides) => {
   const { fetchMock } = stubFetch()

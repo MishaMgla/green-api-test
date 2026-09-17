@@ -23,8 +23,9 @@ function isDashboardOrigin(value: string): boolean {
 /** Local validation only: it never contacts the provider and never probes the queue. */
 export function validateCredentials(fields: Credentials): CredentialErrors {
   const errors: CredentialErrors = {}
-  if (!/^\d{10}$/.test(fields.idInstance)) {
-    errors.idInstance = 'Instance ID is the 10-digit number shown in the dashboard.'
+  // Length is not fixed: live instance IDs run to twelve digits and beyond.
+  if (!/^\d+$/.test(fields.idInstance)) {
+    errors.idInstance = 'Instance ID is the number shown in the dashboard, digits only.'
   }
   if (fields.apiTokenInstance === '') {
     errors.apiTokenInstance = 'API token is required.'
