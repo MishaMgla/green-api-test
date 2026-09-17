@@ -9,3 +9,4 @@ dist
 # agent working notes, not project documentation
 .claude/
 .vitest
+.vercel
