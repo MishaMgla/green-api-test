@@ -29,12 +29,9 @@ test('a pause on an unclassified kind still tells the user what to do', () => {
 })
 
 test.each<GreenApiErrorKind>(['transport', 'rateLimited', 'instanceStarting', 'notAcknowledged'])(
-  'retrying after %s is one waiting line with no action',
+  'retrying after %s shows no banner',
   (kind) => {
-    expect(receiveStatus({ status: 'retrying', kind })).toEqual({
-      message: 'Восстанавливаем соединение…',
-      changeCredentials: false,
-    })
+    expect(receiveStatus({ status: 'retrying', kind })).toBeNull()
   },
 )
 

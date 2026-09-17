@@ -24,16 +24,9 @@ const PAUSED: Partial<Record<GreenApiErrorKind, string>> = {
 
 /** A pause the loop reported without a known cause still tells the user what to do. */
 const PAUSED_UNKNOWN = 'Новые сообщения не поступают. Проверьте инстанс в личном кабинете и повторите попытку.'
-/** Every recoverable kind waits the same way, so no kind-specific advice is useful. */
-const RETRYING = 'Восстанавливаем соединение…'
-
-/**
- * Credential-free guidance for a receive state. `null` is the normal long poll: it
- * says nothing, because a silent poll is not a condition the user has to read about.
- */
+/** Show guidance only when receiving is paused and needs user action. */
 export function receiveStatus(state: ReceiveState): ReceiveStatus | null {
-  if (state.status === 'polling') return null
-  if (state.status === 'retrying') return { message: RETRYING, changeCredentials: false }
+  if (state.status !== 'paused') return null
   return {
     message: PAUSED[state.kind] ?? PAUSED_UNKNOWN,
     changeCredentials: state.kind === 'unauthorized',

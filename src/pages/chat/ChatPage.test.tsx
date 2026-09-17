@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ChatPage } from './ChatPage'
 import { createSession, SessionContext, type Session } from '../../entities/session/session'
@@ -119,17 +119,16 @@ test('an incoming chat is added without stealing the current selection', async (
   expect(within(screen.getByRole('log')).queryAllByRole('listitem')).toHaveLength(0)
 })
 
-test('a transient receive failure shows one quiet line, with or without a chat open', async () => {
+test('a receive timeout retries without showing a banner', async () => {
   const answers = stubFetch()
   renderPage()
 
   await waitFor(() => expect(answers).toHaveLength(1))
-  answers[0]('', 500)
-
-  const waiting = await screen.findByRole('status')
-  expect(waiting).toHaveTextContent(/восстанавливаем/i)
-  // Nothing to act on, and the empty-selection state is untouched behind it.
-  expect(within(waiting).queryByRole('button')).toBeNull()
+  await act(async () => answers[0]('', 408))
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  await waitFor(() => expect(answers).toHaveLength(2), { timeout: 2000 })
+  expect(screen.queryByRole('status')).toBeNull()
   expect(screen.getByText('Выберите чат, чтобы начать общение')).toBeVisible()
 })
 
