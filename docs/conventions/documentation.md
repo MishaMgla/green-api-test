@@ -1,44 +1,46 @@
-# Документация
+# Documentation
 
-Читать, когда пишешь или правишь документацию.
+Read this when writing or changing documentation.
 
-## Принцип
+## Principle
 
-Документация — дерево файлов, а не один длинный файл. Корневой `CLAUDE.md`
-(и симлинк `AGENTS.md`) — **оглавление**: ссылки и одна строка «когда читать».
-Содержимое живёт в листьях `docs/`.
+Documentation is a tree of files, not one long file. The root `CLAUDE.md` (and its
+`AGENTS.md` symlink) is a **table of contents**: links plus one line of "read it
+when". The content lives in the leaves under `docs/`.
 
-Зачем: агент подтягивает в контекст только нужный лист, а не весь свод правил.
-Один большой `CLAUDE.md` съедает контекст на каждом запросе и устаревает целиком.
+Why: an agent pulls only the leaf it needs into context instead of the whole rule
+set. A single large `CLAUDE.md` is paid for on every request and goes stale as one
+piece.
 
-## Правила
+## Rules
 
-- Один файл — одна тема. 150 строк — не запрет, а точка пересмотра: дошло до
-  150 — остановись и проверь, одна ли здесь тема.
-- Каждый лист в `docs/` добавляется строкой в оглавление `CLAUDE.md`. Нет строки
-  в оглавлении — листа не существует, его никто не прочитает. На README, LICENSE
-  и прочие файлы вне `docs/` правило не распространяется.
-- Первая строка после заголовка отвечает: «когда этот файл нужен».
-- Пишем то, что нельзя вывести из кода: решения, ограничения, договорённости.
-  Не пересказываем структуру папок и сигнатуры функций.
-- **Чужую документацию не копируем.** Контракт внешнего API живёт у его автора —
-  храним ссылку на первоисточник и только собственные решения по его
-  использованию. Копия устареет молча и разойдётся с оригиналом.
-- Выбор стека и прочие продуктовые решения — в `docs/architecture.md` с
-  обоснованием, а не в правилах стиля.
-- Документ устарел — правим или удаляем. Неверная документация хуже отсутствующей.
-- Ссылки между документами — относительными путями, чтобы работали и на GitHub,
-  и локально.
+- One file, one topic. 150 lines is not a ban but a review point: once a file
+  reaches it, stop and check whether it is still a single topic.
+- Every leaf under `docs/` gets a row in the `CLAUDE.md` contents table. No row,
+  no leaf — nobody will read it. This does not apply to README, LICENSE or other
+  files outside `docs/`.
+- The first line after the heading answers: when is this file needed.
+- Write what cannot be derived from the code: decisions, constraints, agreements.
+  Do not restate the folder layout or function signatures.
+- **Never copy someone else's documentation.** An external API contract belongs to
+  its author — keep a link to the source and only our own decisions about using
+  it. A copy goes stale silently and drifts from the original.
+- Stack choices and other product decisions belong in `docs/architecture.md` with
+  their rationale, not in style conventions.
+- A stale document gets fixed or deleted. Wrong documentation is worse than none.
+- Link between documents with relative paths so they work both on GitHub and
+  locally.
+- Documents are written in English; this rule includes this one.
 
-## Где что лежит
+## Layout
 
 ```
-CLAUDE.md              оглавление + правила «всегда»
-AGENTS.md -> CLAUDE.md симлинк для Codex
+CLAUDE.md              contents + the "always" rules
+AGENTS.md -> CLAUDE.md symlink for Codex
 docs/
-  conventions/         как мы работаем (документация, git)
-  architecture.md      решения по проекту (появится с ТЗ)
+  conventions/         how we work (documentation, git)
+  architecture.md      project decisions (arrives with the specification)
 ```
 
-Новая тема не влезает ни в одну папку — заводим файл в `docs/`. Три файла рядом —
-точка пересмотра: пора ли делать папку.
+A new topic that fits no folder becomes a file directly under `docs/`. Three files
+side by side is a review point: time to consider a folder.
