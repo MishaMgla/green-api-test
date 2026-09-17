@@ -1,26 +1,27 @@
 # green-api-test
 
-Тестовое задание GREEN-API. ТЗ ещё не получено.
+GREEN-API test assignment. The specification has not been received yet.
 
-## Как пользоваться этим файлом
+## How to use this file
 
-Это **оглавление, а не документация**. Здесь только то, что нужно знать всегда.
-Всё остальное — в `docs/`, по одному файлу на тему. Читай файл только когда
-работаешь с его темой, не загружай `docs/` целиком.
+This is a **table of contents, not documentation**. It holds only what must be
+known on every task. Everything else lives in `docs/`, one file per topic. Read a
+file when you work on its topic — never load `docs/` as a whole.
 
-## Всегда
+## Always
 
-- Ответы и коммиты — на русском, код и имена — на английском.
-- Ничего не изобретаем сверх ТЗ. Нет требования — нет кода.
-- Секреты (idInstance, apiTokenInstance) — только в рантайме у пользователя, никогда в репозитории.
-- Тронул код — оставь один запускаемый тест на нетривиальную логику.
+- Documentation, code and identifiers in English. Replies and commit messages in Russian.
+- Invent nothing beyond the specification. No requirement, no code.
+- Credentials (`idInstance`, `apiTokenInstance`) stay in the user's runtime and
+  never enter the repository.
+- Touched code — leave one runnable check behind for non-trivial logic.
 
-## Оглавление
+## Contents
 
-| Документ | Когда читать |
+| Document | Read it when |
 |---|---|
-| [docs/conventions/documentation.md](docs/conventions/documentation.md) | Пишешь или правишь документацию |
-| [docs/conventions/git.md](docs/conventions/git.md) | Коммитишь, ветвишься, открываешь PR |
-| `docs/architecture.md` | Появится вместе с ТЗ |
+| [docs/conventions/documentation.md](docs/conventions/documentation.md) | Writing or changing documentation |
+| [docs/conventions/git.md](docs/conventions/git.md) | Committing, branching, opening a PR |
+| `docs/architecture.md` | Will appear together with the specification |
 
-`AGENTS.md` — симлинк на этот файл, чтобы Codex и Claude читали одно и то же.
+`AGENTS.md` is a symlink to this file, so Codex and Claude read the same source.
