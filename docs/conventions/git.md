@@ -1,18 +1,15 @@
 # Git
 
-Read this before committing and before opening a PR.
+Читать перед коммитом и перед PR.
 
-- `main` is the working branch. A larger feature gets a `feat/<short-name>` branch
-  and a PR.
-- One commit is one finished change. Never commit "everything from today" at once.
-- Commit message: first line in the imperative, up to 72 characters, in Russian.
-  A body only when it has to explain *why*.
-- If an agent took part in a commit, the commit ends with a trailer line
-  `Co-Authored-By: <the actual participant>` — whoever really did the work.
-  Do not add the trailer "just in case" and do not attribute someone else's work.
-- `node_modules`, `dist` and local `.env` files belong in `.gitignore`, not in the
-  repository.
-- GREEN-API credentials never reach the repository, not even in examples. Use
-  placeholders such as `1101000001` and `<apiTokenInstance>`.
-- Never rewrite the history of `main`: no `push --force`, no `reset --hard` on a
-  shared branch.
+- Ветка `main` — рабочая. Крупная фича — ветка `feat/<короткое-имя>`, потом PR.
+- Коммит — одно законченное изменение. «Всё подряд за день» не коммитим.
+- Сообщение: первая строка в повелительном наклонении, до 72 символов,
+  на русском. Тело — только если нужно объяснить «почему».
+- Если в коммите участвовал агент, коммит заканчивается trailer-строкой
+  `Co-Authored-By: <фактический участник>` — того, кто действительно делал работу.
+  Не проставляем trailer «на всякий случай» и не приписываем чужое авторство.
+- `node_modules`, `dist`, локальные `.env` — в `.gitignore`, не в репозитории.
+- Учётные данные GREEN-API в репозиторий не попадают никогда, даже в примерах.
+  В примерах — заглушки вида `1101000001` / `<apiTokenInstance>`.
+- Историю `main` не переписываем: ни `push --force`, ни `reset --hard` по общей ветке.

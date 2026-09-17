@@ -1,6 +1,5 @@
 # green-api-test
 
-GREEN-API test assignment.
+Тестовое задание GREEN-API.
 
-The specification has not been received yet — this repository is prepared for the
-implementation to come. Conventions live in [CLAUDE.md](CLAUDE.md).
+ТЗ пока не получено — репозиторий заготовлен под будущую реализацию.
