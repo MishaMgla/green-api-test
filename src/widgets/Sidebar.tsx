@@ -13,8 +13,6 @@ type SidebarProps = {
 
 /** Left panel: title row, the new-chat form, and the selectable chat list. */
 export function Sidebar({ chats, selectedId, onSelect, onChangeCredentials }: SidebarProps) {
-  const [search, setSearch] = useState('')
-  const visibleChats = chats.filter((chat) => `${chat.name} ${chat.id}`.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru')))
   const [creating, setCreating] = useState(chats.length === 0)
 
   function selectChat(chatId: string) {
@@ -60,17 +58,6 @@ export function Sidebar({ chats, selectedId, onSelect, onChangeCredentials }: Si
           </button>
         </div>
 
-        <div className="px-4 pb-2">
-          <input
-            type="search"
-            aria-label="Поиск чатов"
-            placeholder="Найти"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="bg-[#0909090d] focus-visible:outline-accent h-9 w-full rounded-xl px-3 text-[15px]/5 outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-2"
-          />
-        </div>
-
         {creating && (
           <div id="new-chat-form" className="border-divider border-b px-4 pb-4">
             <CreateChatForm onSelect={selectChat} />
@@ -83,11 +70,8 @@ export function Sidebar({ chats, selectedId, onSelect, onChangeCredentials }: Si
               Пока нет чатов. Введите номер телефона, чтобы начать общение.
             </p>
           )}
-          {chats.length > 0 && visibleChats.length === 0 && (
-            <p className="text-muted px-4 py-6 text-[15px]/5">Чаты не найдены</p>
-          )}
           <ul aria-label="Чаты">
-            {visibleChats.map((chat) => (
+            {chats.map((chat) => (
               <li key={chat.id}>
                 <ChatListItem
                   chat={chat}

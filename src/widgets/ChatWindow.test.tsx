@@ -6,17 +6,15 @@ import type { Message } from '../entities/conversation/conversation'
 
 const message = (id: string): Message => ({ id, text: id, outgoing: false, timestamp: 1000 })
 
-test('chat search uses names and IDs without losing selection, and broken photos show initials', () => {
+test('chats are selectable without search, and broken photos show initials', () => {
   const onSelect = vi.fn()
   render(<Sidebar chats={[
     { id: '123', name: 'Анна Иванова', messages: [], avatarUrl: 'https://example.com/photo.jpg' },
     { id: '456', name: 'Борис', messages: [] },
   ]} selectedId="123" onSelect={onSelect} onChangeCredentials={() => {}} />)
-  fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск чатов' }), { target: { value: 'ИВАНОВА' } })
-  expect(screen.queryByRole('button', { name: /Борис/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /Анна Иванова/ }))
   expect(onSelect).toHaveBeenCalledWith('123')
-  fireEvent.change(screen.getByRole('searchbox'), { target: { value: '456' } })
   expect(screen.getByRole('button', { name: /Борис/ })).toBeInTheDocument()
 
   const { container, rerender } = render(<Avatar id="123" name="Анна Иванова" size="sm" url="https://example.com/broken.jpg" />)
