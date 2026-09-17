@@ -98,12 +98,17 @@ See [standard errors](https://green-api.com/v3/docs/api/common-errors/).
 
 Use an authorized MAX instance with an empty webhookUrl, incoming notifications
 enabled, and outgoing API notifications enabled for echo recovery. Configure
-these in the dashboard; the app does not mutate instance settings. One app/tab
-must own the instance queue. It drains notifications, including ignored types.
+these in the dashboard; the app does not mutate instance settings. Exactly one
+client must own the instance queue — not merely one tab: any other application
+or script polling the same instance steals notifications from this one. The
+owner drains notifications, including ignored types. Aborting a request cancels
+it in the browser only; it does not prove the provider stopped processing one
+already issued, so ownership is a prerequisite, not something the client enforces.
 See [echo setup](https://green-api.com/v3/docs/api/receiving/notifications-format/outgoing-message/OutgoingApiMessage/).
 
-Check browser access for lookup/send POST, receive GET, and acknowledgement
-DELETE from the actual serving origin. Add a development proxy only after a
-confirmed CORS failure. If a proxy is necessary for delivery, settle the serving
-arrangement before final acceptance; use a fixed validated upstream and redact
-credential-bearing access logs. Do not invent a backend before this is known.
+Browser access is confirmed, so no proxy and no backend are needed. A preflight
+against `https://api.green-api.com` from a localhost origin answers `204` with
+`Access-Control-Allow-Origin: *` and allows `GET, POST, OPTIONS, DELETE` — the
+three verbs this app uses. Should that ever change, a development proxy is the
+answer only after an observed CORS failure: fix the upstream, and redact
+credential-bearing access logs.
