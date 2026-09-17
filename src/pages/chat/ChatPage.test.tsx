@@ -10,7 +10,8 @@ const CREDENTIALS: Credentials = {
   apiUrl: 'https://1101.api.green-api.com',
 }
 
-type Receive = (body: unknown) => void
+/** Answers one request: 200 with `body`, or the given failure status. */
+type Receive = (body: unknown, status?: number) => void
 
 /** Answers the page's receive loop by hand; nothing else in these tests fetches. */
 function stubFetch(): Receive[] {
@@ -25,8 +26,8 @@ function stubFetch(): Receive[] {
         const abort = () => reject(new DOMException('Aborted', 'AbortError'))
         if (signal?.aborted) abort()
         else signal?.addEventListener('abort', abort)
-        answers.push((body) =>
-          resolve({ ok: true, status: 200, text: async () => JSON.stringify(body) }),
+        answers.push((body, status = 200) =>
+          resolve({ ok: status < 400, status, text: async () => JSON.stringify(body) }),
         )
       }),
   )
@@ -36,7 +37,7 @@ function stubFetch(): Receive[] {
 /** Sessions started by a test, ended afterwards so their in-flight requests abort. */
 const sessions: Session[] = []
 
-function renderPage() {
+function renderPage(onChangeCredentials: () => void = () => {}) {
   const session = createSession(CREDENTIALS)
   session.updateChats(() => [
     { id: '10000000', name: 'Alice', messages: [] },
@@ -46,7 +47,7 @@ function renderPage() {
   render(
     <QueryClientProvider client={session.queryClient}>
       <SessionContext.Provider value={session}>
-        <ChatPage onChangeCredentials={() => {}} />
+        <ChatPage onChangeCredentials={onChangeCredentials} />
       </SessionContext.Provider>
     </QueryClientProvider>,
   )
@@ -114,4 +115,65 @@ test('an incoming chat is added without stealing the current selection', async (
   expect(chatButton('Alice')).toHaveAttribute('aria-current', 'true')
   expect(composer()).toHaveValue('for Alice')
   expect(within(screen.getByRole('log')).queryAllByRole('listitem')).toHaveLength(0)
+})
+
+test('a transient receive failure shows one quiet line, with or without a chat open', async () => {
+  const answers = stubFetch()
+  renderPage()
+
+  await waitFor(() => expect(answers).toHaveLength(1))
+  answers[0]('', 500)
+
+  const waiting = await screen.findByRole('status')
+  expect(waiting).toHaveTextContent(/reconnecting/i)
+  // Nothing to act on, and the empty-selection state is untouched behind it.
+  expect(within(waiting).queryByRole('button')).toBeNull()
+  expect(screen.getByText('Select a chat to start writing.')).toBeVisible()
+})
+
+test('a paused receive loop keeps the chat and its draft while offering a retry', async () => {
+  const answers = stubFetch()
+  renderPage()
+
+  open('Alice')
+  type('for Alice')
+  await waitFor(() => expect(answers).toHaveLength(1))
+  answers[0]('', 401)
+
+  const paused = await screen.findByRole('alert')
+  expect(paused).toHaveTextContent(/credentials/i)
+  expect(paused.textContent).not.toContain(CREDENTIALS.apiTokenInstance)
+  // The workspace survives the failure: same chat, same thread, same draft.
+  expect(chatButton('Alice')).toHaveAttribute('aria-current', 'true')
+  expect(screen.getByRole('log', { name: 'Messages' })).toBeVisible()
+  expect(composer()).toHaveValue('for Alice')
+
+  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+
+  // Recovery without a reload: the same owner receives again and the strip goes away.
+  await waitFor(() => expect(answers).toHaveLength(2))
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  expect(composer()).toHaveValue('for Alice')
+})
+
+test('only rejected credentials offer to change them', async () => {
+  const onChangeCredentials = vi.fn()
+  const answers = stubFetch()
+  renderPage(onChangeCredentials)
+
+  await waitFor(() => expect(answers).toHaveLength(1))
+  answers[0]('', 466)
+
+  const paused = await screen.findByRole('alert')
+  expect(paused).toHaveTextContent(/quota/i)
+  expect(within(paused).queryByRole('button', { name: 'Change credentials' })).toBeNull()
+
+  // The same strip on rejected credentials does offer it, and it is the page's own action.
+  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+  await waitFor(() => expect(answers).toHaveLength(2))
+  answers[1]('', 401)
+
+  const rejected = await screen.findByRole('alert')
+  fireEvent.click(within(rejected).getByRole('button', { name: 'Change credentials' }))
+  expect(onChangeCredentials).toHaveBeenCalledTimes(1)
 })

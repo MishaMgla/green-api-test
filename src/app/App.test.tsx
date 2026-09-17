@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { App } from './App'
 import { createSession, chatsKey } from '../entities/session/session'
 import type { Credentials } from '../shared/api/greenApi'
@@ -11,14 +11,26 @@ const CREDENTIALS: Credentials = {
 }
 
 type Pending = { signal: AbortSignal | null | undefined; resolve: (body: unknown) => void }
+/** One long poll, answerable by the test: a notification body, or a failure status. */
+type Poll = { resolve: (body: unknown) => void; fail: (status: number) => void }
 
 /** Replaces fetch with a hand-controlled queue; no request ever leaves the test. */
 function stubFetch(honourAbort = true) {
   const pending: Pending[] = []
-  // The chat page owns the receive loop, whose long poll is not what these tests
-  // drive. It is answered by a promise that never settles and counted separately,
-  // so the hand-controlled queue keeps holding only the requests under test.
-  const receiveMock = vi.fn(() => new Promise(() => {}))
+  // The chat page owns the receive loop, whose long poll is not what most of these
+  // tests drive. Each poll waits in `polls` and settles only when a test answers it,
+  // so the hand-controlled queue keeps holding only the other requests under test.
+  const polls: Poll[] = []
+  const receiveMock = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        polls.push({
+          resolve: (body) =>
+            resolve({ ok: true, status: 200, text: async () => JSON.stringify(body) }),
+          fail: (status) => resolve({ ok: false, status, text: async () => '' }),
+        })
+      }),
+  )
   const fetchMock = vi.fn(
     (_input: string, init?: RequestInit) =>
       new Promise((resolve, reject) => {
@@ -37,7 +49,7 @@ function stubFetch(honourAbort = true) {
   vi.stubGlobal('fetch', (input: string, init?: RequestInit) =>
     input.includes('/receiveNotification') ? receiveMock() : fetchMock(input, init),
   )
-  return { fetchMock, receiveMock, pending }
+  return { fetchMock, receiveMock, pending, polls }
 }
 
 function login(overrides: Partial<Credentials> = {}) {
@@ -157,4 +169,69 @@ test('a late lookup result cannot reach a replacement session', async () => {
   await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
 
   expect(screen.getByRole('list', { name: 'Chats' })).toBeEmptyDOMElement()
+})
+
+test('login → create → send → receive → change credentials recovers without a reload', async () => {
+  // A token unlike any other string on the page, so the leak check cannot pass by luck.
+  const token = 'secret-token-value'
+  const { pending, polls } = stubFetch()
+  render(<App />)
+  login({ apiTokenInstance: token })
+
+  // Create: the lookup resolves the number to its canonical chat ID and selects it.
+  await createChat('79991234567')
+  await act(async () => pending[0].resolve({ exist: true, chatId: '10000000' }))
+  const composer = screen.getByLabelText('Message')
+  const form = composer.closest('form')
+  expect(composer).toBeEnabled()
+
+  // Send: the draft stays readable and the composer reports itself busy meanwhile.
+  fireEvent.change(composer, { target: { value: 'hello there' } })
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  })
+  expect(form).toHaveAttribute('aria-busy', 'true')
+  expect(composer).toHaveValue('hello there')
+  await act(async () => pending[1].resolve({ idMessage: 'out-1' }))
+  const log = screen.getByRole('log', { name: 'Messages' })
+  expect(await within(log).findByText('hello there')).toBeVisible()
+  expect(form).toHaveAttribute('aria-busy', 'false')
+
+  // A new draft, so the receive failure has both a message and a draft to preserve.
+  fireEvent.change(composer, { target: { value: 'still typing' } })
+
+  // Receive fails on credentials: the loop pauses and says so, replacing nothing.
+  await waitFor(() => expect(polls).toHaveLength(1))
+  await act(async () => polls[0].fail(401))
+  const paused = await screen.findByRole('alert')
+  expect(paused).toHaveTextContent(/credentials/i)
+  expect(within(log).getByText('hello there')).toBeVisible()
+  expect(composer).toHaveValue('still typing')
+  expect(document.body.innerHTML).not.toContain(token)
+  expect(document.body.innerHTML).not.toContain(CREDENTIALS.idInstance)
+
+  // Retry resumes the same owner in place: no reload, and the next message arrives.
+  fireEvent.click(within(paused).getByRole('button', { name: 'Retry' }))
+  await waitFor(() => expect(polls).toHaveLength(2))
+  await act(async () =>
+    polls[1].resolve({
+      receiptId: 1,
+      body: {
+        typeWebhook: 'incomingMessageReceived',
+        idMessage: 'in-1',
+        timestamp: 1_700_000_000,
+        senderData: { chatId: '10000000', chatName: 'Alice' },
+        messageData: { typeMessage: 'textMessage', textMessageData: { textMessage: 'hi back' } },
+      },
+    }),
+  )
+  expect(await within(log).findByText('hi back')).toBeVisible()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(within(log).getByText('hello there')).toBeVisible()
+  expect(composer).toHaveValue('still typing')
+
+  // Changing credentials ends the session locally and leaves nothing of it behind.
+  fireEvent.click(screen.getByRole('button', { name: 'Change credentials' }))
+  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible()
+  expect(document.body.innerHTML).not.toContain(token)
 })

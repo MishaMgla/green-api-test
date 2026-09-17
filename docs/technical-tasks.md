@@ -115,7 +115,7 @@ Depends on: T02–T04, T07. Area: `src/pages/chat` receive lifecycle.
   StrictMode cleanup/remount and credential changes must leave one live owner
   with no orphan requests or timers; tab focus must not start another owner.
 
-## T09 — [ ] Complete recovery and interaction states
+## T09 — [x] Complete recovery and interaction states
 
 Depends on: T05–T08. Area: auth, chat page, widgets.
 

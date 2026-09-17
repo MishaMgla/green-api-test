@@ -4,6 +4,7 @@ import { useSendMessage } from '../../features/send-message/useSendMessage'
 import { Sidebar } from '../../widgets/Sidebar'
 import { ChatHeader, Composer, Conversation } from '../../widgets/ChatWindow'
 import { useReceiveLoop } from './useReceiveLoop'
+import { receiveStatus } from './receiveStatus'
 
 /**
  * Composes the workspace and owns the local view state: which chat is selected and
@@ -12,7 +13,8 @@ import { useReceiveLoop } from './useReceiveLoop'
 export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => void }) {
   const chats = useChats()
   // The session's one receive owner: polling runs here, independent of selection.
-  useReceiveLoop()
+  const { state, retry } = useReceiveLoop()
+  const status = receiveStatus(state)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const selected = chats.find((chat) => chat.id === selectedId) ?? null
@@ -36,6 +38,39 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
           selected ? 'bg-linear-to-b from-chat-from to-chat-to' : 'bg-app'
         }`}
       >
+        {/* A thin strip, never a spinner over the workspace: the chat, its messages and
+            its draft stay exactly where they are while receiving is in trouble. It sits
+            here rather than inside the conversation so it shows with no chat selected. */}
+        {status && (
+          <div
+            role={state.status === 'paused' ? 'alert' : 'status'}
+            className="bg-sidebar border-divider flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2 text-[13px]/4"
+          >
+            <p className={state.status === 'paused' ? 'text-ink' : 'text-muted'}>
+              {status.message}
+            </p>
+            {state.status === 'paused' && (
+              <>
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="bg-accent focus-visible:outline-accent rounded-lg px-3 py-1 font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Retry
+                </button>
+                {status.changeCredentials && (
+                  <button
+                    type="button"
+                    onClick={onChangeCredentials}
+                    className="text-accent focus-visible:outline-accent rounded px-1 py-1 hover:underline focus-visible:outline-2"
+                  >
+                    Change credentials
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
         {selected ? (
           <>
             <ChatHeader chat={selected} />

@@ -1,0 +1,58 @@
+import { receiveStatus } from './receiveStatus'
+import type { GreenApiErrorKind } from '../../shared/api/greenApi'
+
+test('a polling loop says nothing at all', () => {
+  expect(receiveStatus({ status: 'polling' })).toBeNull()
+})
+
+test.each<[GreenApiErrorKind, RegExp]>([
+  ['unauthorized', /credentials/i],
+  ['suspended', /suspended/i],
+  ['instanceUnavailable', /authorize it in the dashboard/i],
+  ['quotaExceeded', /quota/i],
+])('a pause on %s explains that kind and asks for a retry', (kind, expected) => {
+  const status = receiveStatus({ status: 'paused', kind })
+  expect(status?.message).toMatch(expected)
+})
+
+test('a suspended account does not read like rejected credentials', () => {
+  const suspended = receiveStatus({ status: 'paused', kind: 'suspended' })
+  const unauthorized = receiveStatus({ status: 'paused', kind: 'unauthorized' })
+  expect(suspended?.message).not.toBe(unauthorized?.message)
+  // Only rejected credentials can be corrected by entering different ones.
+  expect(unauthorized?.changeCredentials).toBe(true)
+  expect(suspended?.changeCredentials).toBe(false)
+})
+
+test('a pause on an unclassified kind still tells the user what to do', () => {
+  expect(receiveStatus({ status: 'paused', kind: 'transport' })?.message).toMatch(/dashboard/i)
+})
+
+test.each<GreenApiErrorKind>(['transport', 'rateLimited', 'instanceStarting', 'notAcknowledged'])(
+  'retrying after %s is one waiting line with no action',
+  (kind) => {
+    expect(receiveStatus({ status: 'retrying', kind })).toEqual({
+      message: 'Reconnecting to the instance…',
+      changeCredentials: false,
+    })
+  },
+)
+
+test('no message carries credentials, a URL or raw provider text', () => {
+  const kinds: GreenApiErrorKind[] = [
+    'unauthorized',
+    'suspended',
+    'instanceUnavailable',
+    'quotaExceeded',
+    'transport',
+    'rateLimited',
+  ]
+  const messages = kinds.flatMap((kind) => [
+    receiveStatus({ status: 'paused', kind })?.message ?? '',
+    receiveStatus({ status: 'retrying', kind })?.message ?? '',
+  ])
+
+  for (const message of messages) {
+    expect(message).not.toMatch(/http|:\/\/|waInstance|apiToken|idInstance|\d{6}/i)
+  }
+})

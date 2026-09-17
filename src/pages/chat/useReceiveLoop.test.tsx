@@ -80,15 +80,17 @@ async function settle(ms = 0) {
   })
 }
 
-/** Renders the single owner; its button shows the paused failure and triggers a retry. */
+/** Renders the single owner; its button shows the reported state and triggers a retry. */
 function Owner() {
-  const { failure, retry } = useReceiveLoop()
+  const { state, retry } = useReceiveLoop()
   return (
     <button type="button" onClick={retry}>
-      {failure ?? 'polling'}
+      {state.status === 'polling' ? 'polling' : `${state.status}:${state.kind}`}
     </button>
   )
 }
+
+const shows = (text: string) => expect(screen.getByRole('button')).toHaveTextContent(text)
 
 function Harness({ session }: { session: Session }) {
   return (
@@ -320,8 +322,8 @@ test('a restarting instance backs off and resumes on its own', async () => {
 
   last(calls).fail(400, '{"message":"instance in starting process try later"}')
   await settle()
-  // The provider resolves this itself, so nothing is surfaced for a manual retry.
-  expect(screen.getByRole('button')).toHaveTextContent('polling')
+  // The provider resolves this itself, so the wait is reported but no action is asked for.
+  shows('retrying:instanceStarting')
   await settle(999)
   expect(receives(calls)).toHaveLength(1)
   await settle(1)
@@ -331,7 +333,7 @@ test('a restarting instance backs off and resumes on its own', async () => {
   // Contrast: a credentials failure on the same loop still pauses it.
   last(calls).fail(401)
   await settle(60_000)
-  expect(screen.getByRole('button')).toHaveTextContent('unauthorized')
+  shows('paused:unauthorized')
   expect(receives(calls)).toHaveLength(2)
 })
 
@@ -341,7 +343,7 @@ test('an authentication failure pauses the owner until the same owner is retried
 
   last(calls).fail(401)
   await settle()
-  expect(screen.getByRole('button')).toHaveTextContent('unauthorized')
+  shows('paused:unauthorized')
 
   // A paused loop spins on nothing, however long it is left alone.
   await settle(60_000)
@@ -351,7 +353,7 @@ test('an authentication failure pauses the owner until the same owner is retried
     fireEvent.click(screen.getByRole('button'))
     await vi.advanceTimersByTimeAsync(0)
   })
-  expect(screen.getByRole('button')).toHaveTextContent('polling')
+  shows('polling')
   // Resumed, not restarted: one more receive and no second live request.
   expect(receives(calls)).toHaveLength(2)
   expect(live(calls)).toHaveLength(1)
@@ -426,6 +428,26 @@ test('changing credentials replaces the owner instead of adding one', async () =
   expect(vi.getTimerCount()).toBe(0)
 })
 
+test('a transient failure reports the wait and clears it on the next successful cycle', async () => {
+  const calls = stubFetch()
+  await mount()
+
+  shows('polling')
+  last(calls).fail(500)
+  await settle()
+  // The first failure is reported: a network outage must not back off silently.
+  shows('retrying:transport')
+
+  await settle(1000)
+  expect(receives(calls)).toHaveLength(2)
+  // Still retrying while the replacement request is in flight; only an outcome clears it.
+  shows('retrying:transport')
+
+  last(calls).resolve(null)
+  await settle()
+  shows('polling')
+})
+
 test('a replacement session polls instead of inheriting the paused failure', async () => {
   const calls = stubFetch()
   const first = createSession(CREDENTIALS)
@@ -434,14 +456,14 @@ test('a replacement session polls instead of inheriting the paused failure', asy
 
   last(calls).fail(401)
   await settle()
-  expect(screen.getByRole('button')).toHaveTextContent('unauthorized')
+  shows('paused:unauthorized')
 
   first.end()
   const second = createSession({ ...CREDENTIALS, idInstance: '1101000002' })
   view.rerender(<Harness session={second} />)
   await settle()
 
-  expect(screen.getByRole('button')).toHaveTextContent('polling')
+  shows('polling')
   expect(live(calls)).toHaveLength(1)
 })
 

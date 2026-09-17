@@ -102,7 +102,9 @@ export function Composer({
 
   return (
     <div className="mx-auto w-full max-w-[740px] px-4 pb-4">
-      <form onSubmit={submit}>
+      {/* Busy rather than a spinner: the draft stays visible and editable while the
+          send is in flight, and the pending state is still announced and testable. */}
+      <form onSubmit={submit} aria-busy={sending}>
         <div className="bg-sidebar flex items-end gap-1 rounded-2xl p-1 shadow-[0_4px_16px_#00000014,0_0_2px_#00000014]">
           <label htmlFor="composer-text" className="sr-only">
             Message
