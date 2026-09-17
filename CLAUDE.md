@@ -1,6 +1,6 @@
 # green-api-test
 
-GREEN-API test assignment. The specification has not been received yet.
+GREEN-API test assignment. The specification lives in `specs/original-spec.md`.
 
 ## How to use this file
 
@@ -22,6 +22,7 @@ file when you work on its topic — never load `docs/` as a whole.
 |---|---|
 | [docs/conventions/documentation.md](docs/conventions/documentation.md) | Writing or changing documentation |
 | [docs/conventions/git.md](docs/conventions/git.md) | Committing, branching, opening a PR |
+| [docs/implementation-plan.md](docs/implementation-plan.md) | Implementing the assignment |
 | `docs/architecture.md` | Will appear together with the specification |
 
 `AGENTS.md` is a symlink to this file, so Codex and Claude read the same source.
