@@ -55,7 +55,9 @@ export function ChatPage({ onChangeCredentials }: { onChangeCredentials: () => v
           // even if another chat is selected before the response arrives.
           onSend={() => selected && send(selected.id, drafts[selected.id] ?? '')}
           sending={sending}
-          error={error}
+          // A failure can arrive after the chat was switched, so it is shown only
+          // while its own chat is open — never against a message never sent here.
+          error={selected && error?.chatId === selected.id ? error.message : null}
           disabled={selected === null}
         />
       </main>

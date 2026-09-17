@@ -93,8 +93,9 @@ export function Composer({
   }
 
   function keyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter sends, Shift+Enter keeps the newline the author typed.
-    if (event.key !== 'Enter' || event.shiftKey) return
+    // Enter sends, Shift+Enter keeps the newline the author typed, and Enter that
+    // commits an IME candidate belongs to the composition, not to the send.
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
     event.preventDefault()
     if (canSend) onSend()
   }

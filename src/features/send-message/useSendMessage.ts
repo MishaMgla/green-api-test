@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { insertMessage } from '../../entities/conversation/conversation'
 import { useSession } from '../../entities/session/session'
@@ -18,6 +18,7 @@ const BY_KIND: Partial<Record<GreenApiErrorKind, string>> = {
   unauthorized: 'The instance rejected these credentials. Change credentials and send again.',
   suspended: 'This GREEN-API account is suspended. Check its status in the dashboard.',
   instanceUnavailable: 'The instance is not ready. Authorize it in the dashboard, then send again.',
+  instanceStarting: 'The instance is restarting. Wait a few seconds and send again.',
   quotaExceeded: 'The plan quota is exhausted. Upgrade the plan to keep sending.',
   rateLimited: 'Too many requests to this instance. Wait a few seconds and send again.',
 }
@@ -29,6 +30,9 @@ function sendErrorMessage(failure: unknown): string {
 
 type Submission = { chatId: string; text: string }
 
+/** A failure belongs to the chat it was submitted for, never to the selected one. */
+export type SendError = { chatId: string; message: string }
+
 /**
  * Sends one message at a time into the chat captured at submission, so changing the
  * selected chat while the request is in flight cannot redirect the result. `onSent`
@@ -36,12 +40,21 @@ type Submission = { chatId: string; text: string }
  */
 export function useSendMessage(onSent: (chatId: string, text: string) => void) {
   const session = useSession()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<SendError | null>(null)
+  // `mutation.isPending` is a render snapshot: two `send()` calls in one handler tick
+  // both read the stale `false` and submit. This flips synchronously, so the second
+  // one is refused before it can duplicate the message in the recipient's chat.
+  const inFlight = useRef(false)
 
   const mutation = useMutation({
     // No automatic retry: a lost response can still mean the message was accepted,
     // so a retry could duplicate a real message in the recipient's chat.
     retry: false,
+    // Released here rather than in onSuccess/onError, so an outcome discarded as
+    // belonging to an ended session still unlatches the guard.
+    onSettled: () => {
+      inFlight.current = false
+    },
     mutationFn: ({ chatId, text }: Submission) =>
       sendMessage(session.credentials, chatId, text, session.signal),
     onSuccess: (idMessage, { chatId, text }) => {
@@ -60,9 +73,9 @@ export function useSendMessage(onSent: (chatId: string, text: string) => void) {
       )
       onSent(chatId, text)
     },
-    onError: (failure) => {
+    onError: (failure, { chatId }) => {
       if (!session.isActive()) return
-      setError(sendErrorMessage(failure))
+      setError({ chatId, message: sendErrorMessage(failure) })
     },
   })
 
@@ -71,12 +84,14 @@ export function useSendMessage(onSent: (chatId: string, text: string) => void) {
     error,
     /** Ignores blank drafts and any submission made while one is still in flight. */
     send(chatId: string, draft: string) {
-      if (mutation.isPending || draft.trim() === '') return
+      if (inFlight.current || draft.trim() === '') return
       if (draft.length > MESSAGE_LIMIT) {
-        setError(TOO_LONG)
+        setError({ chatId, message: TOO_LONG })
         return
       }
-      setError(null)
+      // Only this chat's own error is cleared: another chat's failure still stands.
+      setError((current) => (current?.chatId === chatId ? null : current))
+      inFlight.current = true
       // The draft is kept until the send succeeds, so a failure leaves it editable.
       mutation.mutate({ chatId, text: draft })
     },
