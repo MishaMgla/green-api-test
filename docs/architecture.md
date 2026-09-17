@@ -107,7 +107,9 @@ already issued, so ownership is a prerequisite, not something the client enforce
 See [echo setup](https://green-api.com/v3/docs/api/receiving/notifications-format/outgoing-message/OutgoingApiMessage/).
 
 Browser access is confirmed, so no proxy and no backend are needed. A preflight
-against `https://api.green-api.com` from a localhost origin answers `204` with
+against the instance's own host (`https://1101.api.green-api.com`, the form the
+dashboard shows, not the shared `api.green-api.com`) from a localhost origin
+answers `204` with
 `Access-Control-Allow-Origin: *` and allows `GET, POST, OPTIONS, DELETE` — the
 three verbs this app uses. Should that ever change, a development proxy is the
 answer only after an observed CORS failure: fix the upstream, and redact
