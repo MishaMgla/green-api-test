@@ -55,31 +55,31 @@ export function CreateChatForm({ onSelect }: { onSelect: (chatId: string) => voi
   }
 
   return (
-    <form noValidate onSubmit={submit} className="flex flex-col gap-1">
-      <label htmlFor="new-chat-phone">Phone number</label>
-      <div className="flex gap-2">
-        <input
-          id="new-chat-phone"
-          name="phone"
-          type="tel"
-          autoComplete="off"
-          placeholder="79991234567"
-          value={phone}
-          aria-invalid={error !== null}
-          aria-describedby={error ? 'new-chat-error' : undefined}
-          onChange={(event) => setPhone(event.target.value)}
-          className="border-divider rounded border px-2 py-1 focus-visible:outline-2"
-        />
-        <button
-          type="submit"
-          disabled={lookup.isPending}
-          className="border-divider bg-hover rounded border px-3 py-1 focus-visible:outline-2"
-        >
-          {lookup.isPending ? 'Checking…' : 'Create chat'}
-        </button>
-      </div>
+    <form noValidate onSubmit={submit} className="flex flex-col gap-2">
+      <label htmlFor="new-chat-phone" className="sr-only">
+        Phone number
+      </label>
+      <input
+        id="new-chat-phone"
+        name="phone"
+        type="tel"
+        autoComplete="off"
+        placeholder="79991234567"
+        value={phone}
+        aria-invalid={error !== null}
+        aria-describedby={error ? 'new-chat-error' : undefined}
+        onChange={(event) => setPhone(event.target.value)}
+        className="bg-hover focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 focus-visible:outline-2 focus-visible:-outline-offset-2"
+      />
+      <button
+        type="submit"
+        disabled={lookup.isPending}
+        className="bg-accent focus-visible:outline-accent rounded-xl px-3 py-2 text-[15px]/5 font-medium text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        {lookup.isPending ? 'Checking…' : 'Create chat'}
+      </button>
       {error && (
-        <p id="new-chat-error" role="alert" className="text-muted">
+        <p id="new-chat-error" role="alert" className="text-ink text-[13px]/4">
           {error}
         </p>
       )}
