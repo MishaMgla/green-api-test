@@ -13,7 +13,7 @@ Keep tests beside non-trivial logic, using mocked fetch and fake timers where
 needed. Run `npm run build` and `npm test -- --run` after each implementation
 task; define these scripts in T01. No real credentials in fixtures or snapshots.
 
-## T01 — [ ] Establish the runnable application
+## T01 — [x] Establish the runnable application
 
 Depends on: none. Area: project config and `src/app`.
 
@@ -24,7 +24,7 @@ Depends on: none. Area: project config and `src/app`.
 - Remove template demo UI and add one application mount check.
 - Done when: development server, build, and test scripts work from a clean install.
 
-## T02 — [ ] Establish the API client and browser compatibility
+## T02 — [x] Establish the API client and browser compatibility
 
 Depends on: T01. Area: `src/shared/api`.
 
@@ -39,7 +39,7 @@ Depends on: T01. Area: `src/shared/api`.
   unsuccessful acknowledgement, HTTP failures, and cancellation. Record live
   CORS results separately; keep them pending if no instance is available.
 
-## T03 — [ ] Define conversation data and pure transformations
+## T03 — [x] Define conversation data and pure transformations
 
 Depends on: T02. Area: `src/entities/conversation`, `src/shared/lib`.
 
@@ -52,7 +52,7 @@ Depends on: T02. Area: `src/entities/conversation`, `src/shared/lib`.
 - Done when: a compact table-driven check covers phone boundaries, malformed
   bodies, both text forms/directions, duplicates, and independent chat IDs.
 
-## T04 — [ ] Implement login and session cleanup
+## T04 — [x] Implement login and session cleanup
 
 Depends on: T02, T03. Area: `src/features/auth`, `src/entities/session`, app.
 
@@ -64,7 +64,7 @@ Depends on: T02, T03. Area: `src/features/auth`, `src/entities/session`, app.
   work, clears data, and prevents late results reaching a replacement session.
   Check that credentials never enter storage or cache keys.
 
-## T05 — [ ] Create and select a chat by phone number
+## T05 — [x] Create and select a chat by phone number
 
 Depends on: T03, T04. Area: `src/features/create-chat`, conversation cache.
 
@@ -76,7 +76,7 @@ Depends on: T03, T04. Area: `src/features/create-chat`, conversation cache.
   incoming chat inserted during lookup is reused; cancellation cannot add a
   chat to another session. Cover these with a component/mutation check.
 
-## T06 — [ ] Build the MAX reference interface
+## T06 — [x] Build the MAX reference interface
 
 Depends on: T04, T05. Area: widgets, `src/pages/chat`, app styles.
 
@@ -90,7 +90,7 @@ Depends on: T04, T05. Area: widgets, `src/pages/chat`, app styles.
   text wraps, the composer stays reachable, keyboard navigation works, and chat
   switching preserves the correct draft. Omit unsupported reference controls.
 
-## T07 — [ ] Send text into the selected conversation
+## T07 — [x] Send text into the selected conversation
 
 Depends on: T02–T06. Area: `src/features/send-message`.
 
@@ -101,7 +101,7 @@ Depends on: T02–T06. Area: `src/features/send-message`.
 - Done when: checks cover success, failure, blank/long input, chat switching
   while pending, and POST/echo completion in either order without duplicates.
 
-## T08 — [ ] Receive and acknowledge notifications serially
+## T08 — [x] Receive and acknowledge notifications serially
 
 Depends on: T02–T04, T07. Area: `src/pages/chat` receive lifecycle.
 
